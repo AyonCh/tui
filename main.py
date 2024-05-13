@@ -14,8 +14,6 @@ else:
     import termios
     import sys
 
-    msg = ""
-
     def _getch():
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -25,6 +23,9 @@ else:
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
+
+
+msg = ""
 
 
 def getch():
