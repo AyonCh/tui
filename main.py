@@ -71,8 +71,8 @@ while True:
     else:
         screen.append(f"- {name} {'-'*(size.columns - 3 - len(name))}")
 
-    inp = getch()
     print("\n".join(screen))
+    inp = getch()
     match inp:
         case "j":
             if len(msg) > 0 and msg[0] == ":":
