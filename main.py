@@ -1,32 +1,30 @@
 from os import get_terminal_size, system
 from sys import argv
+import platform
 
-# import platform
+if platform.system() == "Windows":
+    import msvcrt
+    import sys
 
-# if platform.system() == "Windows":
-#     import msvcrt
-#     import sys
-#
-#     def _getch():
-#         return msvcrt.getwch()
-#
-# else:
-import tty
-import termios
-import sys
+    def _getch():
+        return msvcrt.getwch()
 
-msg = ""
+else:
+    import tty
+    import termios
+    import sys
 
+    msg = ""
 
-def _getch():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
+    def _getch():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
 
 
 def getch():
@@ -72,8 +70,8 @@ while True:
     else:
         screen.append(f"- {name} {'-'*(size.columns - 3 - len(name))}")
 
-    print("\n".join(screen))
     inp = getch()
+    print("\n".join(screen))
     match inp:
         case "j":
             if len(msg) > 0 and msg[0] == ":":
