@@ -1,32 +1,27 @@
-from curses import window, wrapper, A_UNDERLINE
-from sys import argv
-
-args = argv
-
-
-def main(stdscr: window):
-    name = ""
-    content = [""]
-    y, x = stdscr.getmaxyx()
-    stdscr.nodelay(True)
-
-    signcolum = int(len(str(y)))
-
-    if len(args) < 2:
-        name = "[unamed]"
-    else:
-        name = args[1]
-        with open(name) as data:
-            content = data.read().splitlines()
-    while True:
-        try:
-            key = stdscr.getkey()
-        except:
-            key = None
-
-        for line in content:
-            stdscr.addstr(line)
-            stdscr.refresh()
+import tty
+import termios
+import sys
 
 
-wrapper(main)
+def _getch():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+
+def getch():
+    global msg
+    ch = _getch()
+    if ch.encode() == b"\x03":
+        msg = "Use :q to exit"
+    if ch.encode() == b"\x1a":
+        sys.exit(0)
+    return ch
+
+
+print(getch())

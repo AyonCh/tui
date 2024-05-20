@@ -64,6 +64,7 @@ while True:
         if view > 0:
             view -= 1
 
+    lineLen = len(content[pos[0]])
     for y in range(size.lines - 3):
         current = int(len(str(y + view + 1)))
         line = ""
@@ -72,12 +73,18 @@ while True:
             for x in range(len(content[y + view])):
                 if x < size.columns - (signcolum + 4):
 
-                    if [y + view, x] == pos:
-                        line += settings["character"]
+                    if pos[1] >= lineLen:
+                        if [y + view, x] == [pos[0], lineLen - 1]:
+                            line += settings["character"]
+                        else:
+                            line += content[y + view][x]
                     else:
-                        line += content[y + view][x]
+                        if [y + view, x] == pos:
+                            line += settings["character"]
+                        else:
+                            line += content[y + view][x]
 
-            if line == "" and [y + view, 0] == pos:
+            if line == "" and y + view == pos[0]:
                 line += settings["character"]
 
             screen.append(f"{y + view + 1}{' '*(signcolum-current+1)} | {line}")
@@ -95,6 +102,7 @@ while True:
 
     print("\n".join(screen))
     inp = getch()
+
     match inp:
         case "j":
             if len(msg) > 0 and msg[0] == ":":
@@ -108,6 +116,29 @@ while True:
             else:
                 if pos[0] > 0:
                     pos[0] -= 1
+        case "l":
+            if len(msg) > 0 and msg[0] == ":":
+                msg += "l"
+            else:
+                if pos[1] + 1 < lineLen:
+                    pos[1] += 1
+        case "h":
+            if len(msg) > 0 and msg[0] == ":":
+                msg += "j"
+            else:
+                if pos[1] > 0:
+                    pos[1] -= 1
+        case "0":
+            if len(msg) > 0 and msg[0] == ":":
+                msg += "0"
+            else:
+                pos[1] = 0
+
+        case "$":
+            if len(msg) > 0 and msg[0] == ":":
+                msg += "$"
+            else:
+                pos[1] = lineLen
 
         case ":":
             if (len(msg) > 0 and msg[0] != ":") or msg == "":
@@ -119,8 +150,15 @@ while True:
                     case "q":
                         system("clear")
                         break
+                    case "qa":
+                        system("clear")
+                        break
                     case _:
                         msg = "Command doesn't exist!!"
+        case "\x7f":
+            if len(msg) > 0 and msg[0] == ":":
+                msg = msg[0:-1]
+
         case _:
             if len(msg) > 0 and msg[0] == ":":
                 msg += inp
