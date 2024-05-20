@@ -58,28 +58,31 @@ else:
 resetTimer = 0
 while True:
     screen = ["-" * size.columns]
-    if pos[0] == size.lines - 3 + view - settings["scrolloff"]:
+    if pos[0] == size.lines - 2 + view - settings["scrolloff"]:
         view += 1
-    if pos[0] == view - 1 + settings["scrolloff"]:
+    if pos[0] == view - 2 + settings["scrolloff"]:
         if view > 0:
             view -= 1
 
-    for y in range(1, size.lines - 3):
-        current = int(len(str(y + view)))
+    for y in range(size.lines - 3):
+        current = int(len(str(y + view + 1)))
         line = ""
-        for x in range(len(content[y + view])):
-            if [y + view - 1, x] == pos:
-                line += settings["character"]
-            else:
-                line += content[y + view][x]
-
-        if line == "" and [y + view - 1, 0] == pos:
-            line += settings["character"]
 
         if len(content) > y + view:
-            screen.append(f"{y + view}{' '*(signcolum-current)} | {line}")
+            for x in range(len(content[y + view])):
+                if x < size.columns - (signcolum + 4):
+
+                    if [y + view, x] == pos:
+                        line += settings["character"]
+                    else:
+                        line += content[y + view][x]
+
+            if line == "" and [y + view, 0] == pos:
+                line += settings["character"]
+
+            screen.append(f"{y + view + 1}{' '*(signcolum-current+1)} | {line}")
         else:
-            screen.append(f"{y + view}{' '*(signcolum-current)} |")
+            screen.append("")
     if msg:
         screen.append(msg)
         if len(msg) > 0 and msg[0] != ":":
@@ -97,7 +100,8 @@ while True:
             if len(msg) > 0 and msg[0] == ":":
                 msg += "j"
             else:
-                pos[0] += 1
+                if pos[0] + 1 < len(content):
+                    pos[0] += 1
         case "k":
             if len(msg) > 0 and msg[0] == ":":
                 msg += "k"
