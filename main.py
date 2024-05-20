@@ -26,6 +26,9 @@ else:
 
 
 msg = ""
+pos = [0, 0]
+
+settings = {"character": "|", "scrolloff": 10}
 
 
 def getch():
@@ -55,12 +58,28 @@ else:
 resetTimer = 0
 while True:
     screen = ["-" * size.columns]
-    for x in range(size.lines - 3):
-        current = int(len(str(x + view)))
-        if len(content) > x + view:
-            screen.append(f"{x+view}{' '*(signcolum-current)} | {content[x+view]}")
+    if pos[0] == size.lines - 3 + view - settings["scrolloff"]:
+        view += 1
+    if pos[0] == view - 1 + settings["scrolloff"]:
+        if view > 0:
+            view -= 1
+
+    for y in range(1, size.lines - 3):
+        current = int(len(str(y + view)))
+        line = ""
+        for x in range(len(content[y + view])):
+            if [y + view - 1, x] == pos:
+                line += settings["character"]
+            else:
+                line += content[y + view][x]
+
+        if line == "" and [y + view - 1, 0] == pos:
+            line += settings["character"]
+
+        if len(content) > y + view:
+            screen.append(f"{y + view}{' '*(signcolum-current)} | {line}")
         else:
-            screen.append(f"{x+view}{' '*(signcolum-current)} |")
+            screen.append(f"{y + view}{' '*(signcolum-current)} |")
     if msg:
         screen.append(msg)
         if len(msg) > 0 and msg[0] != ":":
@@ -78,13 +97,13 @@ while True:
             if len(msg) > 0 and msg[0] == ":":
                 msg += "j"
             else:
-                view += 1
+                pos[0] += 1
         case "k":
             if len(msg) > 0 and msg[0] == ":":
                 msg += "k"
             else:
-                if view > 0:
-                    view -= 1
+                if pos[0] > 0:
+                    pos[0] -= 1
 
         case ":":
             if (len(msg) > 0 and msg[0] != ":") or msg == "":
