@@ -45,7 +45,8 @@ size = get_terminal_size()
 args = argv
 name = ""
 content = [""]
-view = 0
+viewY = 0
+viewX = 0
 
 signcolum = int(len(str(size.lines)))
 if len(args) < 2:
@@ -58,36 +59,43 @@ else:
 resetTimer = 0
 while True:
     screen = ["-" * size.columns]
-    if pos[0] == size.lines - 2 + view - settings["scrolloff"]:
-        view += 1
-    if pos[0] == view - 2 + settings["scrolloff"]:
-        if view > 0:
-            view -= 1
+    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
+        viewY += 1
+    if pos[0] == viewY - 2 + settings["scrolloff"]:
+        if viewY > 0:
+            viewY -= 1
+    if pos[1] == size.columns - (signcolum + 4) + viewX:
+        viewX += 1
+    if pos[1] == viewX:
+        if viewX > 0:
+            viewX -= 1
 
     lineLen = len(content[pos[0]])
     for y in range(size.lines - 3):
-        current = int(len(str(y + view + 1)))
+        currentY = int(len(str(y + viewY + 1)))
         line = ""
 
-        if len(content) > y + view:
-            for x in range(len(content[y + view])):
+        if len(content) > y + viewY:
+            for x in range(len(content[y + viewY])):
+                currentX = int(len(str(x + viewX)))
                 if x < size.columns - (signcolum + 4):
-
                     if pos[1] >= lineLen:
-                        if [y + view, x] == [pos[0], lineLen - 1]:
+                        if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
                             line += settings["character"]
                         else:
-                            line += content[y + view][x]
+                            if len(content[y + viewY]) > x + viewX:
+                                line += content[y + viewY][x + viewX]
                     else:
-                        if [y + view, x] == pos:
+                        if [y + viewY, x + viewX] == pos:
                             line += settings["character"]
                         else:
-                            line += content[y + view][x]
+                            if len(content[y + viewY]) > x + viewX:
+                                line += content[y + viewY][x + viewX]
 
-            if line == "" and y + view == pos[0]:
+            if line == "" and y + viewY == pos[0]:
                 line += settings["character"]
 
-            screen.append(f"{y + view + 1}{' '*(signcolum-current+1)} | {line}")
+            screen.append(f"{y + viewY + 1}{' '*(signcolum-currentY+1)} | {line}")
         else:
             screen.append("")
     if msg:
@@ -133,12 +141,14 @@ while True:
                 msg += "0"
             else:
                 pos[1] = 0
+                viewX = 0
 
         case "$":
             if len(msg) > 0 and msg[0] == ":":
                 msg += "$"
             else:
                 pos[1] = lineLen
+                viewX = lineLen - (size.columns - (signcolum + 4)) // 2
 
         case ":":
             if (len(msg) > 0 and msg[0] != ":") or msg == "":
