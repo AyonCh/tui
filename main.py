@@ -28,7 +28,27 @@ else:
 msg = ""
 pos = [0, 0]
 
-settings = {"character": "|", "scrolloff": 10}
+settings = {"cursorcolor": "white", "scrolloff": 10}
+
+colors = {
+    "FOREGROUND_BLACK": "\033[30m",
+    "FOREGROUND_RED": "\033[31m",
+    "FOREGROUND_GREEN": "\033[32m",
+    "FOREGROUND_YELLOW": "\033[33m",
+    "FOREGROUND_BLUE": "\033[34m",
+    "FOREGROUND_MAGENTA": "\033[35m",
+    "FOREGROUND_CYAN": "\033[36m",
+    "FOREGROUND_WHITE": "\033[37m",
+    "BACKGROUND_BLACK": "\033[40m",
+    "BACKGROUND_RED": "\033[41m",
+    "BACKGROUND_GREEN": "\033[42m",
+    "BACKGROUND_YELLOW": "\033[43m",
+    "BACKGROUND_BLUE": "\033[44m",
+    "BACKGROUND_MAGENTA": "\033[45m",
+    "BACKGROUND_CYAN": "\033[46m",
+    "white": ["\033[47m", "\033[30m"],
+    "RESET": "\033[0m",
+}
 
 
 def getch():
@@ -81,19 +101,19 @@ while True:
                 if x < size.columns - (signcolum + 4):
                     if pos[1] >= lineLen:
                         if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
-                            line += settings["character"]
+                            line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{content[y + viewY][x + viewX]}{colors["RESET"]}"""
                         else:
                             if len(content[y + viewY]) > x + viewX:
                                 line += content[y + viewY][x + viewX]
                     else:
                         if [y + viewY, x + viewX] == pos:
-                            line += settings["character"]
+                            line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{content[y + viewY][x + viewX]}{colors["RESET"]}"""
                         else:
                             if len(content[y + viewY]) > x + viewX:
                                 line += content[y + viewY][x + viewX]
 
             if line == "" and y + viewY == pos[0]:
-                line += settings["character"]
+                line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{" "}{colors["RESET"]}"""
 
             screen.append(f"{y + viewY + 1}{' '*(signcolum-currentY+1)} | {line}")
         else:
