@@ -28,24 +28,16 @@ else:
 msg = ""
 pos = [0, 0]
 
-settings = {"cursorcolor": "white", "scrolloff": 10}
+settings = {"cursorcolor": "black", "scrolloff": 10}
 
 colors = {
-    "FOREGROUND_BLACK": "\033[30m",
-    "FOREGROUND_RED": "\033[31m",
-    "FOREGROUND_GREEN": "\033[32m",
-    "FOREGROUND_YELLOW": "\033[33m",
-    "FOREGROUND_BLUE": "\033[34m",
-    "FOREGROUND_MAGENTA": "\033[35m",
-    "FOREGROUND_CYAN": "\033[36m",
-    "FOREGROUND_WHITE": "\033[37m",
-    "BACKGROUND_BLACK": "\033[40m",
-    "BACKGROUND_RED": "\033[41m",
-    "BACKGROUND_GREEN": "\033[42m",
-    "BACKGROUND_YELLOW": "\033[43m",
-    "BACKGROUND_BLUE": "\033[44m",
-    "BACKGROUND_MAGENTA": "\033[45m",
-    "BACKGROUND_CYAN": "\033[46m",
+    "black": ["\033[40m", "\033[37m"],
+    "red": ["\033[41m", "\033[32m"],
+    "green": ["\033[42m", "\033[31m"],
+    "yellow": ["\033[43m", "\033[34m"],
+    "blue": ["\033[44m", "\033[33m"],
+    "magenta": ["\033[45m", "\033[36m"],
+    "cyan": ["\033[46m", "\033[35m"],
     "white": ["\033[47m", "\033[30m"],
     "RESET": "\033[0m",
 }
