@@ -42,15 +42,16 @@ colors = {
     "RESET": "\033[0m",
 }
 
+mode = "normal"
+
 
 def getch():
     global msg
-    ch = _getch()
-    if ch.encode() == b"\x03":
-        msg = "Use :q to exit"
-    if ch.encode() == b"\x1a":
-        sys.exit(0)
-    return ch
+    return _getch()
+
+
+def color(text):
+    return f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{text}{colors["RESET"]}"""
 
 
 size = get_terminal_size()
@@ -60,13 +61,13 @@ content = [""]
 viewY = 0
 viewX = 0
 
-signcolum = int(len(str(size.lines)))
 if len(args) < 2:
     name = "[unamed]"
 else:
     name = args[1]
     with open(name) as data:
         content = data.read().splitlines()
+signcolum = len(str(len(content)))
 
 resetTimer = 0
 while True:
@@ -92,26 +93,36 @@ while True:
                 currentX = int(len(str(x + viewX)))
                 if x < size.columns - (signcolum + 4):
                     if pos[1] >= lineLen:
-                        if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
-                            line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{content[y + viewY][x + viewX]}{colors["RESET"]}"""
-                        else:
-                            if len(content[y + viewY]) > x + viewX:
+                        if mode == "normal":
+                            if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
+                                line += color(content[y + viewY][x + viewX])
+                            else:
+                                if len(content[y + viewY]) > x + viewX:
+                                    line += content[y + viewY][x + viewX]
+                        elif mode == "insert":
+                            if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
                                 line += content[y + viewY][x + viewX]
+                                line += color(" ")
+                            else:
+                                if len(content[y + viewY]) > x + viewX:
+                                    line += content[y + viewY][x + viewX]
                     else:
                         if [y + viewY, x + viewX] == pos:
-                            line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{content[y + viewY][x + viewX]}{colors["RESET"]}"""
+                            line += color(content[y + viewY][x + viewX])
                         else:
                             if len(content[y + viewY]) > x + viewX:
                                 line += content[y + viewY][x + viewX]
 
             if line == "" and y + viewY == pos[0]:
-                line += f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{" "}{colors["RESET"]}"""
+                line += color(" ")
 
-            screen.append(f"{y + viewY + 1}{' '*(signcolum-currentY+1)} | {line}")
+            screen.append(f"{y + viewY + 1}{' '*(signcolum-currentY)} | {line}")
         else:
             screen.append("")
 
-    screen.append(f"- {name} {'-'*(size.columns - 3 - len(name))}")
+    screen.append(
+        f"- {mode.upper()} - {name} {'-'*(size.columns - 6 - len(name) - len(mode))}"
+    )
 
     screen.append(msg)
     if len(msg) > 0 and msg[0] != ":":
@@ -123,64 +134,129 @@ while True:
     print("\n".join(screen), end="")
     inp = getch()
 
-    match inp:
-        case "j":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "j"
-            else:
-                if pos[0] + 1 < len(content):
-                    pos[0] += 1
-        case "k":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "k"
-            else:
-                if pos[0] > 0:
-                    pos[0] -= 1
-        case "l":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "l"
-            else:
-                if pos[1] + 1 < lineLen:
+    if mode == "normal":
+        match inp:
+            case "j":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "j"
+                else:
+                    if pos[0] + 1 < len(content):
+                        pos[0] += 1
+            case "k":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "k"
+                else:
+                    if pos[0] > 0:
+                        pos[0] -= 1
+            case "l":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "l"
+                else:
+                    if pos[1] + 1 < lineLen:
+                        pos[1] += 1
+            case "h":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "j"
+                else:
+                    if pos[1] > 0:
+                        pos[1] -= 1
+            case "0":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "0"
+                else:
+                    pos[1] = 0
+                    viewX = 0
+
+            case "$":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "$"
+                else:
+                    pos[1] = lineLen
+                    if lineLen > size.columns:
+                        viewX = lineLen - (size.columns - (signcolum + 4)) // 2
+
+            case "i":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "i"
+                else:
+                    mode = "insert"
+            case "a":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += "a"
+                else:
+                    mode = "insert"
                     pos[1] += 1
-        case "h":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "j"
-            else:
+            case ":":
+                if (len(msg) > 0 and msg[0] != ":") or msg == "":
+                    msg = ":"
+            case "\r":
+                if len(msg) > 0 and msg[0] == ":":
+                    commands = msg.strip().split(":")
+                    match commands[1]:
+                        case "q":
+                            system("clear")
+                            break
+                        case "qa":
+                            system("clear")
+                            break
+                        case "w" | "wq" | "wqa":
+                            if len(commands) > 2:
+                                with open(commands[2], "w") as data:
+                                    data.write("\n".join(content))
+                                msg = ""
+                            else:
+                                with open(name, "w") as data:
+                                    data.write("\n".join(content))
+                                msg = ""
+                            if commands[1] == "wq" or commands[1] == "wqa":
+                                system("clear")
+                                break
+                        case _:
+                            msg = "Command doesn't exist!!"
+            case "\x7f":
+                if len(msg) > 0 and msg[0] == ":":
+                    msg = msg[0:-1]
+            case "\x03":
+                msg = "Use :q to exit"
+            case _:
+                if len(msg) > 0 and msg[0] == ":":
+                    msg += inp
+    elif mode == "insert":
+        match inp:
+            case "\x03" | "\x1b":
+                mode = "normal"
+            case "\r":
+                buf = content[pos[0]]
+                before = buf[: pos[1]]
+                after = buf[pos[1] :]
+                content[pos[0]] = before
+                content.insert(pos[0] + 1, after)
+                pos[0] += 1
+                pos[1] = 0
+            case "\x7f":
+                buf = content[pos[0]]
+                before = buf[: pos[1]][0:-1]
+                after = buf[pos[1] :]
+                if len(before) == 0:
+                    if pos[0] - 1 < len(content):
+                        lastLineLen = len(content[pos[0] - 1]) + 1
+                    else:
+                        lastLineLen = 0
+                    if pos[0] - 1 < len(content):
+                        content.pop(pos[0])
+                        content[pos[0] - 1] += after
+                    else:
+                        content.pop(-1)
+                    if pos[0] > 0:
+                        pos[0] -= 1
+                        pos[1] = lastLineLen
+                else:
+                    content[pos[0]] = before + after
                 if pos[1] > 0:
                     pos[1] -= 1
-        case "0":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "0"
-            else:
-                pos[1] = 0
-                viewX = 0
-
-        case "$":
-            if len(msg) > 0 and msg[0] == ":":
-                msg += "$"
-            else:
-                pos[1] = lineLen
-                viewX = lineLen - (size.columns - (signcolum + 4)) // 2
-
-        case ":":
-            if (len(msg) > 0 and msg[0] != ":") or msg == "":
-                msg = ":"
-        case "\r":
-            if len(msg) > 0 and msg[0] == ":":
-                commands = msg.strip().split(":")
-                match commands[1]:
-                    case "q":
-                        system("clear")
-                        break
-                    case "qa":
-                        system("clear")
-                        break
-                    case _:
-                        msg = "Command doesn't exist!!"
-        case "\x7f":
-            if len(msg) > 0 and msg[0] == ":":
-                msg = msg[0:-1]
-
-        case _:
-            if len(msg) > 0 and msg[0] == ":":
-                msg += inp
+            case _:
+                buf = content[pos[0]]
+                before = buf[: pos[1]]
+                after = buf[pos[1] :]
+                content[pos[0]] = before + inp + after
+                pos[1] += 1

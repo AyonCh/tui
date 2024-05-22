@@ -16,12 +16,7 @@ def _getch():
 
 def getch():
     global msg
-    ch = _getch()
-    if ch.encode() == b"\x03":
-        msg = "Use :q to exit"
-    if ch.encode() == b"\x1a":
-        sys.exit(0)
-    return ch
+    return _getch().encode()
 
 
 print(getch())
