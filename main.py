@@ -51,6 +51,7 @@ colors = {
 }
 
 mode = "normal"
+screen = "editor"
 
 
 def getch():
@@ -73,8 +74,7 @@ size = get_terminal_size()
 args = argv
 name = ""
 content = [""]
-viewY = 0
-viewX = 0
+originalContent = [""]
 
 if len(args) < 2:
     name = "[unamed]"
@@ -82,30 +82,24 @@ else:
     name = args[1]
     with open(name) as data:
         content = data.read().splitlines()
+        originalContent = list(content)
 signcolum = len(str(len(content)))
 
 resetTimer = 0
-while True:
-    screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
-    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
-        viewY += 1
-    if pos[0] == viewY - 2 + settings["scrolloff"]:
-        if viewY > 0:
-            viewY -= 1
-    if pos[1] == size.columns - (signcolum + 4) + viewX:
-        viewX += 1
-    if pos[1] == viewX:
-        if viewX > 0:
-            viewX -= 1
 
-    lineLen = len(content[pos[0]])
+viewY = 0
+viewX = 0
+
+
+def editorScreen(msg, lineLen, resetTimer):
+    screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+
     for y in range(size.lines - 3):
         currentY = int(len(str(y + viewY + 1)))
         line = ""
 
         if len(content) > y + viewY:
             for x in range(len(content[y + viewY])):
-                currentX = int(len(str(x + viewX)))
                 if x < size.columns - (signcolum + 4):
                     if pos[1] >= lineLen:
                         if mode == "normal":
@@ -153,9 +147,14 @@ while True:
         else:
             screen.append("")
 
-    screen.append(
-        f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
-    )
+    if originalContent == content:
+        screen.append(
+            f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
+        )
+    else:
+        screen.append(
+            f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} [+] {color('-'*(size.columns - 10 - len(name) - len(mode)), forground=colors['forground_black'])}"
+        )
 
     screen.append(msg)
     if len(msg) > 0 and msg[0] != ":":
@@ -165,6 +164,24 @@ while True:
         resetTimer = 0
 
     print("\n".join(screen), end="")
+
+
+while True:
+    lineLen = len(content[pos[0]])
+    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
+        viewY += 1
+    if pos[0] == viewY - 2 + settings["scrolloff"]:
+        if viewY > 0:
+            viewY -= 1
+    if pos[1] == size.columns - (signcolum + 4) + viewX:
+        viewX += 1
+    if pos[1] == viewX:
+        if viewX > 0:
+            viewX -= 1
+    if screen == "editor":
+        editorScreen(msg, lineLen, resetTimer)
+    elif screen == "explore":
+        pass
     inp = getch()
 
     if mode == "normal":
@@ -212,7 +229,7 @@ while True:
                 pos[1] = 0
             case "\x7f":
                 buf = content[pos[0]]
-                before = buf[: pos[1]][0:-1]
+                before = buf[: pos[1]]
                 after = buf[pos[1] :]
                 if len(before) == 0:
                     if pos[0] - 1 < len(content):
@@ -228,7 +245,7 @@ while True:
                         pos[0] -= 1
                         pos[1] = lastLineLen
                 else:
-                    content[pos[0]] = before + after
+                    content[pos[0]] = before[0:-1] + after
                 if pos[1] > 0:
                     pos[1] -= 1
             case _:
@@ -242,13 +259,27 @@ while True:
             case "\r":
                 commands = (msg.strip().split(":"))[1].split(" ")
                 match commands[0]:
-                    case "q":
-                        clear()
-                        break
-                    case "qa":
-                        clear()
-                        break
-                    case "w" | "wq" | "wqa":
+                    case "q" | "q!":
+                        if commands[0] == "q":
+                            if originalContent == content:
+                                clear()
+                                break
+                            else:
+                                msg = "Unsaved changes, pls save before exiting"
+                        else:
+                            clear()
+                            break
+                    case "qa" | "qa!":
+                        if commands[0] == "qa":
+                            if originalContent == content:
+                                clear()
+                                break
+                            else:
+                                msg = "Unsaved changes, pls save before exiting"
+                        else:
+                            clear()
+                            break
+                    case "w" | "wq" | "wqa" | "wq!" | "wqa!":
                         if len(commands) > 1:
                             with open(commands[1], "w") as data:
                                 data.write("\n".join(content))
@@ -257,9 +288,18 @@ while True:
                             with open(name, "w") as data:
                                 data.write("\n".join(content))
                             msg = ""
+                        originalContent = list(content)
                         if commands[0] == "wq" or commands[0] == "wqa":
+                            if originalContent == content:
+                                clear()
+                                break
+                            else:
+                                msg = "Unsaved changes, pls save before exiting"
+                        if commands[0] == "wq!" or commands[0] == "wqa!":
                             clear()
                             break
+                    case "Explore" | "Ex":
+                        screen = "explore"
                     case _:
                         msg = "Command doesn't exist!!"
                 mode = "normal"
