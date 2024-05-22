@@ -54,6 +54,13 @@ def color(text):
     return f"""{colors[settings["cursorcolor"]][1]}{colors[settings["cursorcolor"]][0]}{text}{colors["RESET"]}"""
 
 
+def clear():
+    if platform.system() == "Windows":
+        system("cls")
+    else:
+        system("clear")
+
+
 size = get_terminal_size()
 args = argv
 name = ""
@@ -194,10 +201,10 @@ while True:
                     commands = msg.strip().split(":")
                     match commands[1]:
                         case "q":
-                            system("clear")
+                            clear()
                             break
                         case "qa":
-                            system("clear")
+                            clear()
                             break
                         case "w" | "wq" | "wqa":
                             if len(commands) > 2:
@@ -209,7 +216,7 @@ while True:
                                     data.write("\n".join(content))
                                 msg = ""
                             if commands[1] == "wq" or commands[1] == "wqa":
-                                system("clear")
+                                clear()
                                 break
                         case _:
                             msg = "Command doesn't exist!!"
