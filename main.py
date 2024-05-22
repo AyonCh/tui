@@ -70,7 +70,7 @@ else:
 
 resetTimer = 0
 while True:
-    screen = ["-" * size.columns]
+    screen = ["\n", "-" * size.columns]
     if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
         viewY += 1
     if pos[0] == viewY - 2 + settings["scrolloff"]:
