@@ -110,17 +110,17 @@ while True:
             screen.append(f"{y + viewY + 1}{' '*(signcolum-currentY+1)} | {line}")
         else:
             screen.append("")
-    if msg:
-        screen.append(msg)
-        if len(msg) > 0 and msg[0] != ":":
-            resetTimer += 1
-        if resetTimer == 10:
-            msg = ""
-            resetTimer = 0
-    else:
-        screen.append(f"- {name} {'-'*(size.columns - 3 - len(name))}")
 
-    print("\n".join(screen))
+    screen.append(f"- {name} {'-'*(size.columns - 3 - len(name))}")
+
+    screen.append(msg)
+    if len(msg) > 0 and msg[0] != ":":
+        resetTimer += 1
+    if resetTimer == 10:
+        msg = ""
+        resetTimer = 0
+
+    print("\n".join(screen), end="")
     inp = getch()
 
     match inp:
