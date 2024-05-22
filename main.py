@@ -1,4 +1,4 @@
-from os import get_terminal_size, system
+from os import get_terminal_size, system, listdir
 from sys import argv
 import platform
 
@@ -75,7 +75,8 @@ args = argv
 name = ""
 content = [""]
 originalContent = [""]
-
+exploreContent = [""]
+dir = listdir()
 if len(args) < 2:
     name = "[unamed]"
 else:
@@ -83,7 +84,8 @@ else:
     with open(name) as data:
         content = data.read().splitlines()
         originalContent = list(content)
-signcolum = len(str(len(content)))
+signcolumn = len(str(len(content)))
+signcolumnDir = len(str(len(dir)))
 
 resetTimer = 0
 
@@ -91,7 +93,7 @@ viewY = 0
 viewX = 0
 
 
-def editorScreen(msg, lineLen, resetTimer):
+def editorScreen(msg, lineLen):
     screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
 
     for y in range(size.lines - 3):
@@ -100,7 +102,7 @@ def editorScreen(msg, lineLen, resetTimer):
 
         if len(content) > y + viewY:
             for x in range(len(content[y + viewY])):
-                if x < size.columns - (signcolum + 4):
+                if x < size.columns - (signcolumn + 4):
                     if pos[1] >= lineLen:
                         if mode == "normal":
                             if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
@@ -142,7 +144,7 @@ def editorScreen(msg, lineLen, resetTimer):
                 )
 
             screen.append(
-                f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolum-currentY)} {color('|', forground=colors['forground_black'])} {line}"
+                f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
             )
         else:
             screen.append("")
@@ -157,31 +159,95 @@ def editorScreen(msg, lineLen, resetTimer):
         )
 
     screen.append(msg)
+
+    print("\n".join(screen), end="")
+
+
+def exploreScreen(msg, lineLen):
+    screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+    for y in range(size.lines - 3):
+        line = ""
+
+        if len(dir) > y + viewY:
+            for x in range(len(dir[y + viewY])):
+                if x < size.columns - (signcolumnDir + 4):
+                    if pos[1] >= lineLen:
+                        if mode == "normal":
+                            if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
+                                line += color(
+                                    dir[y + viewY][x + viewX],
+                                    forground=colors["forground_white"],
+                                    background=colors["background_black"],
+                                )
+                            else:
+                                if len(dir[y + viewY]) > x + viewX:
+                                    line += dir[y + viewY][x + viewX]
+                        elif mode == "insert":
+                            if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
+                                line += dir[y + viewY][x + viewX]
+                                line += color(
+                                    " ",
+                                    forground=colors["forground_white"],
+                                    background=colors["background_black"],
+                                )
+                            else:
+                                if len(dir[y + viewY]) > x + viewX:
+                                    line += dir[y + viewY][x + viewX]
+                    else:
+                        if [y + viewY, x + viewX] == pos:
+                            line += color(
+                                dir[y + viewY][x + viewX],
+                                forground=colors["forground_white"],
+                                background=colors["background_black"],
+                            )
+                        else:
+                            if len(dir[y + viewY]) > x + viewX:
+                                line += dir[y + viewY][x + viewX]
+
+            if line == "" and y + viewY == pos[0]:
+                line += color(
+                    " ",
+                    forground=colors["forground_white"],
+                    background=colors["background_black"],
+                )
+
+            screen.append(f"{' '*signcolumnDir}{line}")
+        else:
+            screen.append("")
+
+    screen.append(
+        f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} Explore {color('-'*(size.columns - 13 - len(mode)), forground=colors['forground_black'])}"
+    )
+    screen.append(msg)
+    print("\n".join(screen), end="")
+
+
+while True:
+    lineLen = 0
+    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
+        viewY += 1
+    if pos[0] == viewY - 2 + settings["scrolloff"]:
+        if viewY > 0:
+            viewY -= 1
+    if pos[1] == size.columns - (signcolumn + 4) + viewX:
+        viewX += 1
+    if pos[1] == viewX:
+        if viewX > 0:
+            viewX -= 1
+
+    if screen == "editor":
+        lineLen = len(content[pos[0]])
+        editorScreen(msg, lineLen)
+    elif screen == "explore":
+        lineLen = len(dir[pos[0]])
+        exploreScreen(msg, lineLen)
+
     if len(msg) > 0 and msg[0] != ":":
         resetTimer += 1
     if resetTimer == 10:
         msg = ""
         resetTimer = 0
 
-    print("\n".join(screen), end="")
-
-
-while True:
-    lineLen = len(content[pos[0]])
-    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
-        viewY += 1
-    if pos[0] == viewY - 2 + settings["scrolloff"]:
-        if viewY > 0:
-            viewY -= 1
-    if pos[1] == size.columns - (signcolum + 4) + viewX:
-        viewX += 1
-    if pos[1] == viewX:
-        if viewX > 0:
-            viewX -= 1
-    if screen == "editor":
-        editorScreen(msg, lineLen, resetTimer)
-    elif screen == "explore":
-        pass
     inp = getch()
 
     if mode == "normal":
@@ -204,7 +270,7 @@ while True:
             case "$":
                 pos[1] = lineLen
                 if lineLen > size.columns:
-                    viewX = lineLen - (size.columns - (signcolum + 4)) // 2
+                    viewX = lineLen - (size.columns - (signcolumn + 4)) // 2
             case "i":
                 mode = "insert"
             case "a":
@@ -283,12 +349,11 @@ while True:
                         if len(commands) > 1:
                             with open(commands[1], "w") as data:
                                 data.write("\n".join(content))
-                            msg = ""
                         else:
                             with open(name, "w") as data:
                                 data.write("\n".join(content))
-                            msg = ""
                         originalContent = list(content)
+                        msg = ""
                         if commands[0] == "wq" or commands[0] == "wqa":
                             if originalContent == content:
                                 clear()
@@ -300,6 +365,7 @@ while True:
                             break
                     case "Explore" | "Ex":
                         screen = "explore"
+                        msg = ""
                     case _:
                         msg = "Command doesn't exist!!"
                 mode = "normal"
