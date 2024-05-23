@@ -1,6 +1,8 @@
-from os import get_terminal_size, system, listdir
-from sys import argv
+from os import get_terminal_size, system, listdir, walk
+from sys import argv, set_coroutine_origin_tracking_depth
 import platform
+from threading import Thread
+from time import sleep
 
 if platform.system() == "Windows":
     import msvcrt
@@ -93,9 +95,21 @@ viewY = 0
 viewX = 0
 
 
-def editorScreen(msg, lineLen):
-    screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
-
+def EditorScreen(
+    size,
+    msg,
+    lineLen,
+    buffer,
+    content,
+    originalContent,
+    viewY,
+    viewX,
+    signcolumn,
+    mode,
+    name,
+    pos,
+    colors,
+):
     for y in range(size.lines - 3):
         currentY = int(len(str(y + viewY + 1)))
         line = ""
@@ -143,28 +157,38 @@ def editorScreen(msg, lineLen):
                     background=colors["background_black"],
                 )
 
-            screen.append(
+            buffer.append(
                 f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
             )
         else:
-            screen.append("")
+            buffer.append("")
 
     if originalContent == content:
-        screen.append(
+        buffer.append(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
         )
     else:
-        screen.append(
+        buffer.append(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} [+] {color('-'*(size.columns - 10 - len(name) - len(mode)), forground=colors['forground_black'])}"
         )
 
-    screen.append(msg)
+    buffer.append(msg)
 
-    print("\n".join(screen), end="")
+    print("\n".join(buffer), end="")
 
 
-def exploreScreen(msg, lineLen):
-    screen = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+def ExploreScreen(
+    size,
+    msg,
+    lineLen,
+    buffer,
+    viewY,
+    viewX,
+    mode,
+    pos,
+    colors,
+    dir,
+):
     for y in range(size.lines - 3):
         line = ""
 
@@ -211,16 +235,43 @@ def exploreScreen(msg, lineLen):
                     background=colors["background_black"],
                 )
 
-            screen.append(f"{' '*signcolumnDir}{line}")
+            buffer.append(f"{' '*signcolumnDir}{line}")
         else:
-            screen.append("")
+            buffer.append("")
 
-    screen.append(
+    buffer.append(
         f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} Explore {color('-'*(size.columns - 13 - len(mode)), forground=colors['forground_black'])}"
     )
-    screen.append(msg)
-    print("\n".join(screen), end="")
+    buffer.append(msg)
+    print("\n".join(buffer), end="")
 
+
+def Screen(msg, pos, screen):
+    buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+
+    if screen == "editor":
+        lineLen = len(content[pos[0]])
+        EditorScreen(
+            size,
+            msg,
+            lineLen,
+            buffer,
+            content,
+            originalContent,
+            viewY,
+            viewX,
+            signcolumn,
+            mode,
+            name,
+            pos,
+            colors,
+        )
+    elif screen == "explore":
+        lineLen = len(dir[pos[0]])
+        ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
+
+
+# Thread(target=Screen, args=[msg, pos, screen], daemon=True).start()
 
 while True:
     lineLen = 0
@@ -235,12 +286,28 @@ while True:
         if viewX > 0:
             viewX -= 1
 
+    buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+
     if screen == "editor":
         lineLen = len(content[pos[0]])
-        editorScreen(msg, lineLen)
+        EditorScreen(
+            size,
+            msg,
+            lineLen,
+            buffer,
+            content,
+            originalContent,
+            viewY,
+            viewX,
+            signcolumn,
+            mode,
+            name,
+            pos,
+            colors,
+        )
     elif screen == "explore":
         lineLen = len(dir[pos[0]])
-        exploreScreen(msg, lineLen)
+        ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
 
     if len(msg) > 0 and msg[0] != ":":
         resetTimer += 1
