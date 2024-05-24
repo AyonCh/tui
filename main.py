@@ -1,4 +1,15 @@
-from os import get_terminal_size, listdir, path
+from os import (
+    get_terminal_size,
+    getxattr,
+    listdir,
+    path,
+    mkdir,
+    remove,
+    rename,
+    chdir,
+    getcwd,
+)
+from shutil import rmtree
 from sys import argv
 from display import Display
 from utility import color, getch, clear, colors
@@ -31,8 +42,8 @@ else:
         buffers.append(
             {
                 "name": args[1],
-                "content": content,
-                "originalContent": list(content),
+                "content": content if content else [""],
+                "originalContent": list(content) if content else [""],
                 "viewY": 0,
                 "viewX": 0,
                 "pos": [0, 0],
@@ -51,7 +62,10 @@ while buffers:
 
     signcolumn = len(str(len(bufData["content"])))
 
-    lineLen = int(len(bufData["content"][bufData["pos"][0]]))
+    try:
+        lineLen = int(len(bufData["content"][bufData["pos"][0]]))
+    except:
+        lineLen = 0
 
     if bufData["pos"][0] == size.lines - 2 + bufData["viewY"] - settings["scrolloff"]:
         bufData["viewY"] += 1
@@ -82,7 +96,7 @@ while buffers:
         color,
     )
 
-    if len(msg) > 0 and msg[0] != ":":
+    if resetTimer == 1:
         resetTimer += 1
     if resetTimer == 10:
         msg = ""
@@ -122,16 +136,47 @@ while buffers:
                     bufData["mode"] = "insert"
                 else:
                     msg = "This buffer is not modifiable"
+                    resetTimer = 1
             case "a":
-                bufData["mode"] = "insert"
-                bufData["pos"][1] += 1
+                if bufData["modifiable"]:
+                    bufData["mode"] = "insert"
+                    bufData["pos"][1] += 1
+                else:
+                    msg = "This buffer is not modifiable"
+                    resetTimer = 1
             case "\r":
                 if bufData["name"] == "Explore":
                     currentLine = bufData["content"][bufData["pos"][0]]
                     if path.isdir(bufData["baseDir"] + currentLine):
-                        bufData["baseDir"] = bufData["baseDir"] + currentLine
-                        bufData["content"] = ["../", *listdir(bufData["baseDir"])]
+                        chdir(bufData["baseDir"] + currentLine)
+                        bufData["baseDir"] = getcwd() + "/"
+                        directory = []
+                        for dir in listdir(bufData["baseDir"]):
+                            if path.isdir(bufData["baseDir"] + dir):
+                                directory.append(dir + "/")
+                            if path.isfile(bufData["baseDir"] + dir):
+                                directory.append(dir)
+                        bufData["content"] = ["../", *directory]
+                        bufData["originalContent"] = ["../", *directory]
+                        if bufData["pos"][0] >= len(bufData["content"]):
+                            bufData["pos"][0] = len(bufData["content"]) - 1
+
+                        if bufData["pos"][1] >= len(
+                            bufData["content"][bufData["pos"][0]]
+                        ):
+                            bufData["pos"][1] = len(
+                                bufData["content"][bufData["pos"][0]]
+                            )
+                            if (
+                                len(bufData["content"][bufData["pos"][0]])
+                                > size.columns
+                            ):
+                                bufData["viewX"] = (
+                                    len(bufData["content"][bufData["pos"][0]])
+                                    - (size.columns - (signcolumn + 4)) // 2
+                                )
                     if path.isfile(bufData["baseDir"] + currentLine):
+                        buffers.pop(currentBuffer)
                         for buffer in range(len(buffers)):
                             if buffers[buffer]["name"] == currentLine:
                                 currentBuffer = buffer
@@ -155,11 +200,28 @@ while buffers:
                 else:
                     if bufData["pos"][0] + 1 < len(bufData["content"]):
                         bufData["pos"][0] += 1
+            case "%":
+                if bufData["name"] == "Explore":
+                    bufData["mode"] = "command"
+                    msg = "Enter filename: "
+            case "r":
+                if bufData["name"] == "Explore":
+                    bufData["mode"] = "command"
+                    msg = "Rename to: "
+            case "D":
+                if bufData["name"] == "Explore":
+                    bufData["mode"] = "command"
+                    msg = "Delete file: "
+            case "d":
+                if bufData["name"] == "Explore":
+                    bufData["mode"] = "command"
+                    msg = "Enter directory name: "
             case ":":
                 bufData["mode"] = "command"
                 msg = ":"
             case "\x03":
                 msg = "Use :q to exit"
+                resetTimer = 1
     elif bufData["mode"] == "insert":
         match inp:
             case "\x03" | "\x1b":
@@ -205,135 +267,232 @@ while buffers:
     elif bufData["mode"] == "command":
         match inp:
             case "\r":
-                commands = (msg.strip().split(":"))[1].split(" ")
-                match commands[0]:
-                    case "q" | "q!":
-                        if commands[0] == "q":
-                            if bufData["name"] != "Explore":
-                                if bufData["originalContent"] == bufData["content"]:
-                                    buffers.pop(currentBuffer)
-                                    currentBuffer = len(buffers) - 1
-                                    msg = ""
-                                else:
-                                    msg = "Unsaved changes, pls save before closing the buffer"
-                            else:
-                                buffers.pop(currentBuffer)
-                                currentBuffer = len(buffers) - 1
-                                msg = ""
-
-                        else:
-                            buffers.pop(currentBuffer)
-                            currentBuffer = len(buffers) - 1
+                arguments = msg.strip().split(":")
+                commands = arguments[1].split(" ")
+                if arguments[0] == "Enter filename":
+                    if arguments[1]:
+                        try:
+                            with open(
+                                bufData["baseDir"] + arguments[1].strip(), "w"
+                            ) as data:
+                                data.write("")
                             msg = ""
-                    # case "qa" | "qa!":
-                    #     if commands[0] == "qa":
-                    #         if originalContent == content:
-                    #             clear()
-                    #             break
-                    #         else:
-                    #             msg = "Unsaved changes, pls save before exiting"
-                    #     else:
-                    #         clear()
-                    #         break
-                    case "w" | "wq" | "wq!":
-                        if bufData["modifiable"]:
-                            if len(commands) > 1:
-                                with open(commands[1], "w") as data:
-                                    data.write("\n".join(bufData["content"]))
-                            else:
-                                with open(bufData["name"], "w") as data:
-                                    data.write("\n".join(bufData["content"]))
-                            bufData["originalContent"] = list(bufData["content"])
-                            msg = ""
-                            if commands[0] == "wq":
+                            directory = []
+                            for dir in listdir(bufData["baseDir"]):
+                                if path.isdir(bufData["baseDir"] + dir):
+                                    directory.append(dir + "/")
+                                if path.isfile(bufData["baseDir"] + dir):
+                                    directory.append(dir)
+                            bufData["content"] = ["../", *directory]
+                            bufData["originalContent"] = ["../", *directory]
+                        except:
+                            msg = "Directory doesn't exists"
+                    else:
+                        msg = ""
+                elif arguments[0] == "Rename to":
+                    if arguments[1]:
+                        currentLine = bufData["content"][bufData["pos"][0]]
+                        rename(
+                            bufData["baseDir"] + currentLine,
+                            bufData["baseDir"] + arguments[1].strip(),
+                        )
+                        directory = []
+                        for dir in listdir(bufData["baseDir"]):
+                            if path.isdir(bufData["baseDir"] + dir):
+                                directory.append(dir + "/")
+                            if path.isfile(bufData["baseDir"] + dir):
+                                directory.append(dir)
+                        bufData["content"] = ["../", *directory]
+                        bufData["originalContent"] = ["../", *directory]
+                    msg = ""
+                elif arguments[0] == "Delete file":
+                    if (
+                        arguments[1].strip().lower() == "y"
+                        or arguments[1].strip().lower() == "yes"
+                    ):
+                        currentLine = bufData["content"][bufData["pos"][0]]
+                        if path.isfile(bufData["baseDir"] + currentLine):
+                            remove(bufData["baseDir"] + currentLine)
+                        if path.isdir(bufData["baseDir"] + currentLine):
+                            rmtree(bufData["baseDir"] + currentLine)
+                        directory = []
+                        for dir in listdir(bufData["baseDir"]):
+                            if path.isdir(bufData["baseDir"] + dir):
+                                directory.append(dir + "/")
+                            if path.isfile(bufData["baseDir"] + dir):
+                                directory.append(dir)
+                        bufData["content"] = ["../", *directory]
+                        bufData["originalContent"] = ["../", *directory]
+                    msg = ""
+                elif arguments[0] == "Enter directory name":
+                    if arguments[1]:
+                        mkdir(bufData["baseDir"] + arguments[1].strip())
+                        directory = []
+                        for dir in listdir(bufData["baseDir"]):
+                            if path.isdir(bufData["baseDir"] + dir):
+                                directory.append(dir + "/")
+                            if path.isfile(bufData["baseDir"] + dir):
+                                directory.append(dir)
+                        bufData["content"] = ["../", *directory]
+                        bufData["originalContent"] = ["../", *directory]
+                    msg = ""
+                else:
+                    match commands[0]:
+                        case "q" | "q!":
+                            if commands[0] == "q":
                                 if bufData["name"] != "Explore":
                                     if bufData["originalContent"] == bufData["content"]:
                                         buffers.pop(currentBuffer)
                                         currentBuffer = len(buffers) - 1
                                         msg = ""
                                     else:
-                                        msg = "Unsaved changes, pls save before exiting"
+                                        msg = "Unsaved changes, pls save before closing the buffer"
+                                        resetTimer = 1
                                 else:
                                     buffers.pop(currentBuffer)
                                     currentBuffer = len(buffers) - 1
                                     msg = ""
-                            if commands[0] == "wq!":
+
+                            else:
                                 buffers.pop(currentBuffer)
                                 currentBuffer = len(buffers) - 1
                                 msg = ""
-                        else:
-                            msg = "This buffer is not modifiable"
-                    case "Explore" | "Ex":
-                        msg = ""
-                        for buffer in range(len(buffers)):
-                            if buffers[buffer]["name"] == "Explore":
-                                currentBuffer = buffer
-                                break
-                        else:
-                            buffers.append(
-                                {
-                                    "name": "Explore",
-                                    "content": ["../", *listdir("./")],
-                                    "originalContent": ["../", *listdir("./")],
-                                    "viewY": 0,
-                                    "viewX": 0,
-                                    "pos": [0, 0],
-                                    "mode": "normal",
-                                    "modifiable": False,
-                                    "baseDir": "./",
-                                }
-                            )
-                            currentBuffer = len(buffers) - 1
-                    case "buffer":
-                        if len(commands) > 1:
-                            if int(commands[1]) < len(buffers):
-                                currentBuffer = int(commands[1])
+                        case "qa" | "qa!":
+                            if commands[0] == "qa":
+                                for buffer in range(len(buffers)):
+                                    if (
+                                        buffers[buffer]["content"]
+                                        != buffers[buffer]["originalContent"]
+                                    ):
+                                        msg = f"Unsaved changes in buffer {buffer}, pls save before exiting"
+                                        break
+                                else:
+                                    buffers = []
+                            else:
+                                buffers = []
+                        case "w" | "wq" | "wq!":
+                            if bufData["modifiable"]:
+                                if len(commands) > 1:
+                                    with open(commands[1], "w") as data:
+                                        data.write("\n".join(bufData["content"]))
+                                else:
+                                    with open(bufData["name"], "w") as data:
+                                        data.write("\n".join(bufData["content"]))
+                                bufData["originalContent"] = list(bufData["content"])
                                 msg = ""
                             else:
-                                msg = "That buffer doesn't exists"
-                        else:
-                            msg = str(currentBuffer)
-                    case "badd" | "e":
-                        if len(commands) > 1:
-                            try:
-                                with open(commands[1]) as data:
-                                    content = data.read().splitlines()
-                                    buffers.append(
-                                        {
-                                            "name": "Explore",
-                                            "content": content,
-                                            "originalContent": list(content),
-                                            "viewY": 0,
-                                            "viewX": 0,
-                                            "pos": [0, 0],
-                                            "mode": "normal",
-                                            "modifiable": True,
-                                        }
-                                    )
-                                msg = ""
-                            except:
-                                msg = "File/Folder doesn't exists!"
-                        else:
-                            msg = "Argument required!"
-
-                    case "bdel":
-                        if len(commands) > 1:
-                            if int(commands[1]) < len(buffers):
-                                buffers.pop(int(commands[1]))
+                                msg = "Buffer is not modifiable"
+                                resetTimer = 1
+                            if commands[0] == "wq" or commands[0] == "wq!":
+                                buffers.pop(currentBuffer)
                                 if currentBuffer >= len(buffers):
                                     currentBuffer = len(buffers) - 1
                                 msg = ""
+                        case "wa" | "wqa" | "wqa!":
+                            for buffer in range(len(buffers)):
+                                if buffers[buffer]["modifiable"]:
+                                    with open(buffers[buffer]["name"], "w") as data:
+                                        data.write(
+                                            "\n".join(buffers[buffer]["content"])
+                                        )
+                                    buffers[buffer]["originalContent"] = list(
+                                        buffers[buffer]["content"]
+                                    )
+                                    msg = ""
+                                    if commands[0] == "wqa" or commands[0] == "wqa!":
+                                        buffers.pop(buffer)
+                                        if currentBuffer >= len(buffers):
+                                            currentBuffer = len(buffers) - 1
+                                        msg = ""
+                                else:
+                                    msg = f"Buffer {buffer} is not modifiable"
+                                    resetTimer = 1
+                                    break
+                        case "Explore" | "Ex":
+                            msg = ""
+                            for buffer in range(len(buffers)):
+                                if buffers[buffer]["name"] == "Explore":
+                                    currentBuffer = buffer
+                                    break
                             else:
-                                msg = "That buffer doesn't exists"
-                        else:
-                            msg = "Argument required!"
-                    case _:
-                        msg = "Command doesn't exist!!"
+                                directory = []
+                                for dir in listdir(getcwd()):
+                                    if path.isdir(dir):
+                                        directory.append(dir + "/")
+                                    if path.isfile(dir):
+                                        directory.append(dir)
+
+                                buffers.append(
+                                    {
+                                        "name": "Explore",
+                                        "content": ["../", *directory],
+                                        "originalContent": ["../", *directory],
+                                        "viewY": 0,
+                                        "viewX": 0,
+                                        "pos": [0, 0],
+                                        "mode": "normal",
+                                        "modifiable": False,
+                                        "baseDir": getcwd() + "/",
+                                    }
+                                )
+                                currentBuffer = len(buffers) - 1
+                        case "buffer":
+                            if len(commands) > 1:
+                                if int(commands[1]) < len(buffers):
+                                    currentBuffer = int(commands[1])
+                                    msg = ""
+                                else:
+                                    msg = "That buffer doesn't exists"
+                                    resetTimer = 1
+                            else:
+                                msg = str(currentBuffer)
+                        case "badd" | "e":
+                            if len(commands) > 1:
+                                try:
+                                    with open(commands[1]) as data:
+                                        content = data.read().splitlines()
+                                        buffers.append(
+                                            {
+                                                "name": commands[1],
+                                                "content": content,
+                                                "originalContent": list(content),
+                                                "viewY": 0,
+                                                "viewX": 0,
+                                                "pos": [0, 0],
+                                                "mode": "normal",
+                                                "modifiable": True,
+                                            }
+                                        )
+                                    msg = ""
+                                except:
+                                    msg = "File/Folder doesn't exists!"
+                                    resetTimer = 1
+                            else:
+                                msg = "Argument required!"
+                                resetTimer = 1
+
+                        case "bdel":
+                            if len(commands) > 1:
+                                if int(commands[1]) < len(buffers):
+                                    buffers.pop(int(commands[1]))
+                                    if currentBuffer >= len(buffers):
+                                        currentBuffer = len(buffers) - 1
+                                    msg = ""
+                                else:
+                                    msg = "That buffer doesn't exists"
+                                    resetTimer = 1
+                            else:
+                                msg = "Argument required!"
+                                resetTimer = 1
+                        case _:
+                            msg = "Command doesn't exist!!"
+                            resetTimer = 1
                 bufData["mode"] = "normal"
             case "\x7f":
-                msg = msg[0:-1]
-                if msg == "":
-                    bufData["mode"] = "normal"
+                if not (len(msg) > 1 and msg.strip()[-1] == ":"):
+                    msg = msg[0:-1]
+                    if msg == "":
+                        bufData["mode"] = "normal"
             case "\x03" | "\x1b":
                 bufData["mode"] = "normal"
                 msg = ""

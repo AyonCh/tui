@@ -66,7 +66,6 @@ def Display(
             )
         else:
             buffer.append("")
-
     if originalContent == content:
         buffer.append(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
