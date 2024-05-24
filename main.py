@@ -1,8 +1,7 @@
 from os import get_terminal_size, system, listdir, walk
-from sys import argv, set_coroutine_origin_tracking_depth
+from sys import argv
 import platform
 from threading import Thread
-from time import sleep
 
 if platform.system() == "Windows":
     import msvcrt
@@ -248,42 +247,68 @@ def ExploreScreen(
     print("\n".join(buffer), end="")
 
 
-def Screen(msg, pos, screen, resetTimer):
-    # while True:
-    buffer = [
-        "\n",
-        color("-" * size.columns, forground=colors["forground_black"]),
-    ]
+def Screen():
+    global msg
+    global pos
+    global screen
+    global resetTimer
+    global size
+    global msg
+    global lineLen
+    global buffer
+    global content
+    global originalContent
+    global viewY
+    global viewX
+    global signcolumn
+    global mode
+    global name
+    global pos
+    global colors
+    global dir
+    global inp
 
-    if screen == "editor":
-        lineLen = len(content[pos[0]])
-        EditorScreen(
-            size,
-            msg,
-            lineLen,
-            buffer,
-            content,
-            originalContent,
-            viewY,
-            viewX,
-            signcolumn,
-            mode,
-            name,
-            pos,
-            colors,
-        )
-    elif screen == "explore":
-        lineLen = len(dir[pos[0]])
-        ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
+    prevInp = str(inp)
+    while True:
+        if prevInp != inp:
+            clear()
+            buffer = [
+                "\n",
+                color("-" * size.columns, forground=colors["forground_black"]),
+            ]
 
-    if len(msg) > 0 and msg[0] != ":":
-        resetTimer += 1
-    if resetTimer == 10:
-        msg = ""
-        resetTimer = 0
+            if screen == "editor":
+                lineLen = len(content[pos[0]])
+                EditorScreen(
+                    size,
+                    msg,
+                    lineLen,
+                    buffer,
+                    content,
+                    originalContent,
+                    viewY,
+                    viewX,
+                    signcolumn,
+                    mode,
+                    name,
+                    pos,
+                    colors,
+                )
+            elif screen == "explore":
+                lineLen = len(dir[pos[0]])
+                ExploreScreen(
+                    size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir
+                )
+            prevInp = str(inp)
+
+        if len(msg) > 0 and msg[0] != ":":
+            resetTimer += 1
+        if resetTimer == 10:
+            msg = ""
+            resetTimer = 0
 
 
-# Thread(target=Screen, args=[msg, pos, screen, resetTimer], daemon=True).start()
+Thread(target=Screen, daemon=True).start()
 
 while True:
     lineLen = 0
@@ -298,9 +323,13 @@ while True:
         if viewX > 0:
             viewX -= 1
 
-    Screen(msg, pos, screen, resetTimer)
+    if screen == "editor":
+        lineLen = len(content[pos[0]])
+    if screen == "explore":
+        lineLen = len(dir[pos[0]])
 
-    #
+    # Screen(msg, pos, screen, resetTimer)
+
     # buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
     #
     # if screen == "editor":
@@ -329,7 +358,7 @@ while True:
     # if resetTimer == 10:
     #     msg = ""
     #     resetTimer = 0
-
+    #
     inp = getch()
 
     if mode == "normal":
