@@ -92,13 +92,14 @@ while buffers:
         bufData["mode"],
         bufData["name"],
         bufData["pos"],
+        bufData["modifiable"],
         colors,
         color,
     )
 
-    if resetTimer == 1:
+    if resetTimer > 0:
         resetTimer += 1
-    if resetTimer == 10:
+    if resetTimer == 11:
         msg = ""
         resetTimer = 0
 
@@ -287,24 +288,31 @@ while buffers:
                             bufData["originalContent"] = ["../", *directory]
                         except:
                             msg = "Directory doesn't exists"
+                            resetTimer = 1
                     else:
                         msg = ""
                 elif arguments[0] == "Rename to":
                     if arguments[1]:
-                        currentLine = bufData["content"][bufData["pos"][0]]
-                        rename(
-                            bufData["baseDir"] + currentLine,
-                            bufData["baseDir"] + arguments[1].strip(),
-                        )
-                        directory = []
-                        for dir in listdir(bufData["baseDir"]):
-                            if path.isdir(bufData["baseDir"] + dir):
-                                directory.append(dir + "/")
-                            if path.isfile(bufData["baseDir"] + dir):
-                                directory.append(dir)
-                        bufData["content"] = ["../", *directory]
-                        bufData["originalContent"] = ["../", *directory]
-                    msg = ""
+                        try:
+                            currentLine = bufData["content"][bufData["pos"][0]]
+                            rename(
+                                bufData["baseDir"] + currentLine,
+                                bufData["baseDir"] + arguments[1].strip(),
+                            )
+                            directory = []
+                            for dir in listdir(bufData["baseDir"]):
+                                if path.isdir(bufData["baseDir"] + dir):
+                                    directory.append(dir + "/")
+                                if path.isfile(bufData["baseDir"] + dir):
+                                    directory.append(dir)
+                            bufData["content"] = ["../", *directory]
+                            bufData["originalContent"] = ["../", *directory]
+                            msg = ""
+                        except:
+                            msg = "Directory doesn't exists"
+                            resetTimer = 1
+                    else:
+                        msg = ""
                 elif arguments[0] == "Delete file":
                     if (
                         arguments[1].strip().lower() == "y"

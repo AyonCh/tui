@@ -10,6 +10,7 @@ def Display(
     mode,
     name,
     pos,
+    modifiable,
     colors,
     color,
 ):
@@ -61,9 +62,15 @@ def Display(
                     background=colors["background_black"],
                 )
 
-            buffer.append(
-                f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
-            )
+            if modifiable:
+                buffer.append(
+                    f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
+                )
+            else:
+                buffer.append(
+                    f"{color('|', forground=colors['forground_black'])} {line}"
+                )
+
         else:
             buffer.append("")
     if originalContent == content:
