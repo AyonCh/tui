@@ -246,46 +246,7 @@ def ExploreScreen(
     print("\n".join(buffer), end="")
 
 
-def Screen(msg, pos, screen):
-    buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
-
-    if screen == "editor":
-        lineLen = len(content[pos[0]])
-        EditorScreen(
-            size,
-            msg,
-            lineLen,
-            buffer,
-            content,
-            originalContent,
-            viewY,
-            viewX,
-            signcolumn,
-            mode,
-            name,
-            pos,
-            colors,
-        )
-    elif screen == "explore":
-        lineLen = len(dir[pos[0]])
-        ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
-
-
-# Thread(target=Screen, args=[msg, pos, screen], daemon=True).start()
-
-while True:
-    lineLen = 0
-    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
-        viewY += 1
-    if pos[0] == viewY - 2 + settings["scrolloff"]:
-        if viewY > 0:
-            viewY -= 1
-    if pos[1] == size.columns - (signcolumn + 4) + viewX:
-        viewX += 1
-    if pos[1] == viewX:
-        if viewX > 0:
-            viewX -= 1
-
+def Screen(msg, pos, screen, resetTimer):
     buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
 
     if screen == "editor":
@@ -314,6 +275,55 @@ while True:
     if resetTimer == 10:
         msg = ""
         resetTimer = 0
+    # sleep(0.1)
+
+
+Thread(target=Screen, args=[msg, pos, screen, resetTimer], daemon=True).start()
+
+while True:
+    lineLen = 0
+    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
+        viewY += 1
+    if pos[0] == viewY - 2 + settings["scrolloff"]:
+        if viewY > 0:
+            viewY -= 1
+    if pos[1] == size.columns - (signcolumn + 4) + viewX:
+        viewX += 1
+    if pos[1] == viewX:
+        if viewX > 0:
+            viewX -= 1
+
+    # Screen(msg, pos, screen, resetTimer)
+
+    #
+    # buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+    #
+    # if screen == "editor":
+    #     lineLen = len(content[pos[0]])
+    #     EditorScreen(
+    #         size,
+    #         msg,
+    #         lineLen,
+    #         buffer,
+    #         content,
+    #         originalContent,
+    #         viewY,
+    #         viewX,
+    #         signcolumn,
+    #         mode,
+    #         name,
+    #         pos,
+    #         colors,
+    #     )
+    # elif screen == "explore":
+    #     lineLen = len(dir[pos[0]])
+    #     ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
+    #
+    # if len(msg) > 0 and msg[0] != ":":
+    #     resetTimer += 1
+    # if resetTimer == 10:
+    #     msg = ""
+    #     resetTimer = 0
 
     inp = getch()
 
