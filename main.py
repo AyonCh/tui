@@ -94,6 +94,8 @@ resetTimer = 0
 viewY = 0
 viewX = 0
 
+inp = ""
+
 
 def EditorScreen(
     size,
@@ -247,7 +249,11 @@ def ExploreScreen(
 
 
 def Screen(msg, pos, screen, resetTimer):
-    buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
+    # while True:
+    buffer = [
+        "\n",
+        color("-" * size.columns, forground=colors["forground_black"]),
+    ]
 
     if screen == "editor":
         lineLen = len(content[pos[0]])
@@ -275,10 +281,9 @@ def Screen(msg, pos, screen, resetTimer):
     if resetTimer == 10:
         msg = ""
         resetTimer = 0
-    # sleep(0.1)
 
 
-Thread(target=Screen, args=[msg, pos, screen, resetTimer], daemon=True).start()
+# Thread(target=Screen, args=[msg, pos, screen, resetTimer], daemon=True).start()
 
 while True:
     lineLen = 0
@@ -293,7 +298,7 @@ while True:
         if viewX > 0:
             viewX -= 1
 
-    # Screen(msg, pos, screen, resetTimer)
+    Screen(msg, pos, screen, resetTimer)
 
     #
     # buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
