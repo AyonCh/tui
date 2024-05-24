@@ -259,10 +259,10 @@ while buffers:
                 if lineLen > size.columns:
                     viewX = lineLen - (size.columns - (signcolumn + 4)) // 2
             case "i":
-                mode = "insert"
+                bufData["mode"] = "insert"
             case "a":
-                mode = "insert"
-                pos[1] += 1
+                bufData["mode"] = "insert"
+                bufData["pos"][1] += 1
             case ":":
                 bufData["mode"] = "command"
                 msg = ":"
@@ -271,7 +271,7 @@ while buffers:
     elif mode == "insert":
         match inp:
             case "\x03" | "\x1b":
-                mode = "normal"
+                bufData["mode"] = "normal"
             case "\r":
                 buf = content[pos[0]]
                 before = buf[: pos[1]]
@@ -281,26 +281,27 @@ while buffers:
                 pos[0] += 1
                 pos[1] = 0
             case "\x7f":
-                buf = content[pos[0]]
-                before = buf[: pos[1]]
-                after = buf[pos[1] :]
-                if len(before) == 0:
-                    if pos[0] - 1 < len(content):
-                        lastLineLen = len(content[pos[0] - 1]) + 1
+                if pos[0] != 0:
+                    buf = content[pos[0]]
+                    before = buf[: pos[1]]
+                    after = buf[pos[1] :]
+                    if len(before) == 0:
+                        if pos[0] - 1 < len(content):
+                            lastLineLen = len(content[pos[0] - 1]) + 1
+                        else:
+                            lastLineLen = 0
+                        if pos[0] - 1 < len(content):
+                            content.pop(pos[0])
+                            content[pos[0] - 1] += after
+                        else:
+                            content.pop(-1)
+                        if pos[0] > 0:
+                            pos[0] -= 1
+                            pos[1] = lastLineLen
                     else:
-                        lastLineLen = 0
-                    if pos[0] - 1 < len(content):
-                        content.pop(pos[0])
-                        content[pos[0] - 1] += after
-                    else:
-                        content.pop(-1)
-                    if pos[0] > 0:
-                        pos[0] -= 1
-                        pos[1] = lastLineLen
-                else:
-                    content[pos[0]] = before[0:-1] + after
-                if pos[1] > 0:
-                    pos[1] -= 1
+                        content[pos[0]] = before[0:-1] + after
+                    if pos[1] > 0:
+                        pos[1] -= 1
             case _:
                 buf = content[pos[0]]
                 before = buf[: pos[1]]
