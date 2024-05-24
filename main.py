@@ -1,4 +1,4 @@
-from os import get_terminal_size, listdir
+from os import get_terminal_size, listdir, path
 from sys import argv
 from display import Display
 from utility import color, getch, clear, colors
@@ -13,7 +13,6 @@ buffers = []
 currentBuffer = 0
 
 if len(args) < 2:
-    name = "[unamed]"
     buffers.append(
         {
             "name": "[unamed]",
@@ -47,165 +46,23 @@ resetTimer = 0
 
 inp = ""
 
-
-# def ExploreScreen(
-#     size,
-#     msg,
-#     lineLen,
-#     buffer,
-#     viewY,
-#     viewX,
-#     mode,
-#     pos,
-#     colors,
-#     dir,
-# ):
-#     for y in range(size.lines - 3):
-#         line = ""
-#
-#         if len(dir) > y + viewY:
-#             for x in range(len(dir[y + viewY])):
-#                 if x < size.columns - (signcolumnDir + 4):
-#                     if pos[1] >= lineLen:
-#                         if mode == "normal":
-#                             if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
-#                                 line += color(
-#                                     dir[y + viewY][x + viewX],
-#                                     forground=colors["forground_white"],
-#                                     background=colors["background_black"],
-#                                 )
-#                             else:
-#                                 if len(dir[y + viewY]) > x + viewX:
-#                                     line += dir[y + viewY][x + viewX]
-#                         elif mode == "insert":
-#                             if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
-#                                 line += dir[y + viewY][x + viewX]
-#                                 line += color(
-#                                     " ",
-#                                     forground=colors["forground_white"],
-#                                     background=colors["background_black"],
-#                                 )
-#                             else:
-#                                 if len(dir[y + viewY]) > x + viewX:
-#                                     line += dir[y + viewY][x + viewX]
-#                     else:
-#                         if [y + viewY, x + viewX] == pos:
-#                             line += color(
-#                                 dir[y + viewY][x + viewX],
-#                                 forground=colors["forground_white"],
-#                                 background=colors["background_black"],
-#                             )
-#                         else:
-#                             if len(dir[y + viewY]) > x + viewX:
-#                                 line += dir[y + viewY][x + viewX]
-#
-#             if line == "" and y + viewY == pos[0]:
-#                 line += color(
-#                     " ",
-#                     forground=colors["forground_white"],
-#                     background=colors["background_black"],
-#                 )
-#
-#             buffer.append(f"{' '*signcolumnDir}{line}")
-#         else:
-#             buffer.append("")
-#
-#     buffer.append(
-#         f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} Explore {color('-'*(size.columns - 13 - len(mode)), forground=colors['forground_black'])}"
-#     )
-#     buffer.append(msg)
-#     print("\n".join(buffer), end="")
-#
-
-# def Screen():
-#     global msg
-#     global pos
-#     global screen
-#     global resetTimer
-#     global size
-#     global msg
-#     global lineLen
-#     global buffer
-#     global content
-#     global originalContent
-#     global viewY
-#     global viewX
-#     global signcolumn
-#     global mode
-#     global name
-#     global pos
-#     global colors
-#     global dir
-#     global inp
-#
-#     prevInp = str(inp)
-#     while True:
-#         if prevInp != inp:
-#             clear()
-#             buffer = [
-#                 "\n",
-#                 color("-" * size.columns, forground=colors["forground_black"]),
-#             ]
-#
-#             if screen == "editor":
-#                 lineLen = len(content[pos[0]])
-#                 EditorScreen(
-#                     size,
-#                     msg,
-#                     lineLen,
-#                     buffer,
-#                     content,
-#                     originalContent,
-#                     viewY,
-#                     viewX,
-#                     signcolumn,
-#                     mode,
-#                     name,
-#                     pos,
-#                     colors,
-#                 )
-#             elif screen == "explore":
-#                 lineLen = len(dir[pos[0]])
-#                 ExploreScreen(
-#                     size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir
-#                 )
-#             prevInp = str(inp)
-#
-#         if len(msg) > 0 and msg[0] != ":":
-#             resetTimer += 1
-#         if resetTimer == 10:
-#             msg = ""
-#             resetTimer = 0
-
-
-# Thread(target=Screen, daemon=True).start()
-
 while buffers:
     bufData = buffers[currentBuffer]
 
-    name = bufData["name"]
-    content = bufData["content"]
-    originalContent = bufData["originalContent"]
-    pos = bufData["pos"]
-    viewY = bufData["viewY"]
-    viewX = bufData["viewX"]
-    mode = bufData["mode"]
-    modifiable = bufData["modifiable"]
+    signcolumn = len(str(len(bufData["content"])))
 
-    signcolumn = len(str(len(content)))
+    lineLen = int(len(bufData["content"][bufData["pos"][0]]))
 
-    lineLen = int(len(content[pos[0]]))
-
-    if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
-        viewY += 1
-    if pos[0] == viewY - 2 + settings["scrolloff"]:
-        if viewY > 0:
-            viewY -= 1
-    if pos[1] == size.columns - (signcolumn + 4) + viewX:
-        viewX += 1
-    if pos[1] == viewX:
-        if viewX > 0:
-            viewX -= 1
+    if bufData["pos"][0] == size.lines - 2 + bufData["viewY"] - settings["scrolloff"]:
+        bufData["viewY"] += 1
+    if bufData["pos"][0] == bufData["viewY"] - 2 + settings["scrolloff"]:
+        if bufData["viewY"] > 0:
+            bufData["viewY"] -= 1
+    if bufData["pos"][1] == size.columns - (signcolumn + 4) + bufData["viewX"]:
+        bufData["viewX"] += 1
+    if bufData["pos"][1] == bufData["viewX"]:
+        if bufData["viewX"] > 0:
+            bufData["viewX"] -= 1
 
     # Screen(msg, pos, screen, resetTimer)
 
@@ -213,21 +70,17 @@ while buffers:
         size,
         msg,
         lineLen,
-        content,
-        originalContent,
-        viewY,
-        viewX,
+        bufData["content"],
+        bufData["originalContent"],
+        bufData["viewY"],
+        bufData["viewX"],
         signcolumn,
-        mode,
-        name,
-        pos,
+        bufData["mode"],
+        bufData["name"],
+        bufData["pos"],
         colors,
         color,
     )
-
-    # elif screen == "explore":
-    #     lineLen = len(dir[pos[0]])
-    #     ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
 
     if len(msg) > 0 and msg[0] != ":":
         resetTimer += 1
@@ -237,90 +90,137 @@ while buffers:
 
     inp = getch()
 
-    if mode == "normal":
+    if bufData["mode"] == "normal":
         match inp:
             case "j":
-                if pos[0] + 1 < len(content):
-                    pos[0] += 1
+                if bufData["pos"][0] + 1 < len(bufData["content"]):
+                    bufData["pos"][0] += 1
             case "k":
-                if pos[0] > 0:
-                    pos[0] -= 1
+                if bufData["pos"][0] > 0:
+                    bufData["pos"][0] -= 1
             case "l":
-                if pos[1] + 1 < lineLen:
-                    pos[1] += 1
+                if bufData["pos"][1] + 1 < lineLen:
+                    bufData["pos"][1] += 1
             case "h":
-                if pos[1] > 0:
-                    pos[1] -= 1
+                if bufData["pos"][1] > 0:
+                    bufData["pos"][1] -= 1
             case "0":
-                pos[1] = 0
-                viewX = 0
+                bufData["pos"][1] = 0
+                bufData["viewX"] = 0
             case "$":
-                pos[1] = lineLen
+                bufData["pos"][1] = lineLen
                 if lineLen > size.columns:
-                    viewX = lineLen - (size.columns - (signcolumn + 4)) // 2
+                    bufData["viewX"] = lineLen - (size.columns - (signcolumn + 4)) // 2
+            case "g":
+                bufData["mode"] = "waiting"
+            case "G":
+                bufData["pos"][0] = len(bufData["content"]) - 1
+                if len(bufData["content"]) - 1 > size.lines:
+                    bufData["viewY"] = len(bufData["content"]) - (size.lines - 3) // 2
             case "i":
-                bufData["mode"] = "insert"
+                if bufData["modifiable"]:
+                    bufData["mode"] = "insert"
+                else:
+                    msg = "This buffer is not modifiable"
             case "a":
                 bufData["mode"] = "insert"
                 bufData["pos"][1] += 1
+            case "\r":
+                if bufData["name"] == "Explore":
+                    currentLine = bufData["content"][bufData["pos"][0]]
+                    if path.isdir(bufData["baseDir"] + currentLine):
+                        bufData["baseDir"] = bufData["baseDir"] + currentLine
+                        bufData["content"] = ["../", *listdir(bufData["baseDir"])]
+                    if path.isfile(bufData["baseDir"] + currentLine):
+                        for buffer in range(len(buffers)):
+                            if buffers[buffer]["name"] == currentLine:
+                                currentBuffer = buffer
+                                break
+                        else:
+                            with open(bufData["baseDir"] + currentLine) as data:
+                                content = data.read().splitlines()
+                                buffers.append(
+                                    {
+                                        "name": currentLine,
+                                        "content": content,
+                                        "originalContent": list(content),
+                                        "viewY": 0,
+                                        "viewX": 0,
+                                        "pos": [0, 0],
+                                        "mode": "normal",
+                                        "modifiable": True,
+                                    }
+                                )
+                                currentBuffer = len(buffers) - 1
+                else:
+                    if bufData["pos"][0] + 1 < len(bufData["content"]):
+                        bufData["pos"][0] += 1
             case ":":
                 bufData["mode"] = "command"
                 msg = ":"
             case "\x03":
                 msg = "Use :q to exit"
-    elif mode == "insert":
+    elif bufData["mode"] == "insert":
         match inp:
             case "\x03" | "\x1b":
                 bufData["mode"] = "normal"
             case "\r":
-                buf = content[pos[0]]
-                before = buf[: pos[1]]
-                after = buf[pos[1] :]
-                content[pos[0]] = before
-                content.insert(pos[0] + 1, after)
-                pos[0] += 1
-                pos[1] = 0
+                buf = bufData["content"][bufData["pos"][0]]
+                before = buf[: bufData["pos"][1]]
+                after = buf[bufData["pos"][1] :]
+                bufData["content"][bufData["pos"][0]] = before
+                bufData["content"].insert(bufData["pos"][0] + 1, after)
+                bufData["pos"][0] += 1
+                bufData["pos"][1] = 0
             case "\x7f":
-                if pos[0] != 0:
-                    buf = content[pos[0]]
-                    before = buf[: pos[1]]
-                    after = buf[pos[1] :]
+                if bufData["pos"][0] != 0:
+                    buf = bufData["content"][bufData["pos"][0]]
+                    before = buf[: bufData["pos"][1]]
+                    after = buf[bufData["pos"][1] :]
                     if len(before) == 0:
-                        if pos[0] - 1 < len(content):
-                            lastLineLen = len(content[pos[0] - 1]) + 1
+                        if bufData["pos"][0] - 1 < len(bufData["content"]):
+                            lastLineLen = (
+                                len(bufData["content"][bufData["pos"][0] - 1]) + 1
+                            )
                         else:
                             lastLineLen = 0
-                        if pos[0] - 1 < len(content):
-                            content.pop(pos[0])
-                            content[pos[0] - 1] += after
+                        if bufData["pos"][0] - 1 < len(bufData["content"]):
+                            bufData["content"].pop(bufData["pos"][0])
+                            bufData["content"][bufData["pos"][0] - 1] += after
                         else:
-                            content.pop(-1)
-                        if pos[0] > 0:
-                            pos[0] -= 1
-                            pos[1] = lastLineLen
+                            bufData["content"].pop(-1)
+                        if bufData["pos"][0] > 0:
+                            bufData["pos"][0] -= 1
+                            bufData["pos"][1] = lastLineLen
                     else:
-                        content[pos[0]] = before[0:-1] + after
-                    if pos[1] > 0:
-                        pos[1] -= 1
+                        bufData["content"][bufData["pos"][0]] = before[0:-1] + after
+                    if bufData["pos"][1] > 0:
+                        bufData["pos"][1] -= 1
             case _:
-                buf = content[pos[0]]
-                before = buf[: pos[1]]
-                after = buf[pos[1] :]
-                content[pos[0]] = before + inp + after
-                pos[1] += 1
-    elif mode == "command":
+                buf = bufData["content"][bufData["pos"][0]]
+                before = buf[: bufData["pos"][1]]
+                after = buf[bufData["pos"][1] :]
+                bufData["content"][bufData["pos"][0]] = before + inp + after
+                bufData["pos"][1] += 1
+    elif bufData["mode"] == "command":
         match inp:
             case "\r":
                 commands = (msg.strip().split(":"))[1].split(" ")
                 match commands[0]:
                     case "q" | "q!":
                         if commands[0] == "q":
-                            if originalContent == content:
+                            if bufData["name"] != "Explore":
+                                if bufData["originalContent"] == bufData["content"]:
+                                    buffers.pop(currentBuffer)
+                                    currentBuffer = len(buffers) - 1
+                                    msg = ""
+                                else:
+                                    msg = "Unsaved changes, pls save before closing the buffer"
+                            else:
                                 buffers.pop(currentBuffer)
                                 currentBuffer = len(buffers) - 1
                                 msg = ""
-                            else:
-                                msg = "Unsaved changes, pls save before closing the buffer"
+
                         else:
                             buffers.pop(currentBuffer)
                             currentBuffer = len(buffers) - 1
@@ -336,22 +236,27 @@ while buffers:
                     #         clear()
                     #         break
                     case "w" | "wq" | "wq!":
-                        if modifiable:
+                        if bufData["modifiable"]:
                             if len(commands) > 1:
                                 with open(commands[1], "w") as data:
-                                    data.write("\n".join(content))
+                                    data.write("\n".join(bufData["content"]))
                             else:
-                                with open(name, "w") as data:
-                                    data.write("\n".join(content))
-                            originalContent = list(content)
+                                with open(bufData["name"], "w") as data:
+                                    data.write("\n".join(bufData["content"]))
+                            bufData["originalContent"] = list(bufData["content"])
                             msg = ""
                             if commands[0] == "wq":
-                                if originalContent == content:
+                                if bufData["name"] != "Explore":
+                                    if bufData["originalContent"] == bufData["content"]:
+                                        buffers.pop(currentBuffer)
+                                        currentBuffer = len(buffers) - 1
+                                        msg = ""
+                                    else:
+                                        msg = "Unsaved changes, pls save before exiting"
+                                else:
                                     buffers.pop(currentBuffer)
                                     currentBuffer = len(buffers) - 1
                                     msg = ""
-                                else:
-                                    msg = "Unsaved changes, pls save before exiting"
                             if commands[0] == "wq!":
                                 buffers.pop(currentBuffer)
                                 currentBuffer = len(buffers) - 1
@@ -360,31 +265,68 @@ while buffers:
                             msg = "This buffer is not modifiable"
                     case "Explore" | "Ex":
                         msg = ""
-                        buffers.append(
-                            {
-                                "name": "Explore",
-                                "content": listdir(),
-                                "originalContent": listdir(),
-                                "viewY": 0,
-                                "viewX": 0,
-                                "pos": [0, 0],
-                                "mode": "normal",
-                                "modifiable": False,
-                            }
-                        )
-                        currentBuffer = len(buffers) - 1
+                        for buffer in range(len(buffers)):
+                            if buffers[buffer]["name"] == "Explore":
+                                currentBuffer = buffer
+                                break
+                        else:
+                            buffers.append(
+                                {
+                                    "name": "Explore",
+                                    "content": ["../", *listdir("./")],
+                                    "originalContent": ["../", *listdir("./")],
+                                    "viewY": 0,
+                                    "viewX": 0,
+                                    "pos": [0, 0],
+                                    "mode": "normal",
+                                    "modifiable": False,
+                                    "baseDir": "./",
+                                }
+                            )
+                            currentBuffer = len(buffers) - 1
                     case "buffer":
                         if len(commands) > 1:
                             if int(commands[1]) < len(buffers):
                                 currentBuffer = int(commands[1])
+                                msg = ""
                             else:
                                 msg = "That buffer doesn't exists"
                         else:
                             msg = str(currentBuffer)
-                    case "badd":
-                        pass
+                    case "badd" | "e":
+                        if len(commands) > 1:
+                            try:
+                                with open(commands[1]) as data:
+                                    content = data.read().splitlines()
+                                    buffers.append(
+                                        {
+                                            "name": "Explore",
+                                            "content": content,
+                                            "originalContent": list(content),
+                                            "viewY": 0,
+                                            "viewX": 0,
+                                            "pos": [0, 0],
+                                            "mode": "normal",
+                                            "modifiable": True,
+                                        }
+                                    )
+                                msg = ""
+                            except:
+                                msg = "File/Folder doesn't exists!"
+                        else:
+                            msg = "Argument required!"
+
                     case "bdel":
-                        pass
+                        if len(commands) > 1:
+                            if int(commands[1]) < len(buffers):
+                                buffers.pop(int(commands[1]))
+                                if currentBuffer >= len(buffers):
+                                    currentBuffer = len(buffers) - 1
+                                msg = ""
+                            else:
+                                msg = "That buffer doesn't exists"
+                        else:
+                            msg = "Argument required!"
                     case _:
                         msg = "Command doesn't exist!!"
                 bufData["mode"] = "normal"
@@ -397,4 +339,12 @@ while buffers:
                 msg = ""
             case _:
                 msg += inp
+    elif bufData["mode"] == "waiting":
+        match inp:
+            case "g":
+                bufData["viewY"] = 0
+                bufData["pos"][0] = 0
+            case "\x03" | "\x1b":
+                bufData["mode"] = "normal"
+        bufData["mode"] = "normal"
 clear()
