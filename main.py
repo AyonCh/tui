@@ -372,6 +372,18 @@ while buffers:
                             }
                         )
                         currentBuffer = len(buffers) - 1
+                    case "buffer":
+                        if len(commands) > 1:
+                            if int(commands[1]) < len(buffers):
+                                currentBuffer = int(commands[1])
+                            else:
+                                msg = "That buffer doesn't exists"
+                        else:
+                            msg = str(currentBuffer)
+                    case "badd":
+                        pass
+                    case "bdel":
+                        pass
                     case _:
                         msg = "Command doesn't exist!!"
                 bufData["mode"] = "normal"
