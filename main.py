@@ -1,317 +1,201 @@
-from os import get_terminal_size, system, listdir, walk
+from os import get_terminal_size, listdir
 from sys import argv
-import platform
-from threading import Thread
-
-if platform.system() == "Windows":
-    import msvcrt
-    import sys
-
-    def _getch():
-        return msvcrt.getwch()
-
-else:
-    import tty
-    import termios
-    import sys
-
-    def _getch():
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
+from display import Display
+from utility import color, getch, clear, colors
 
 msg = ""
-pos = [0, 0]
-
 settings = {"cursorcolor": "black", "scrolloff": 10}
-
-colors = {
-    "background_black": "\033[40m",
-    "background_red": "\033[41m",
-    "background_green": "\033[42m",
-    "background_yellow": "\033[43m",
-    "background_blue": "\033[44m",
-    "background_magenta": "\033[45m",
-    "background_cyan": "\033[46m",
-    "background_white": "\033[47m",
-    "forground_black": "\033[30m",
-    "forground_red": "\033[31m",
-    "forground_green": "\033[32m",
-    "forground_yellow": "\033[33m",
-    "forground_blue": "\033[34m",
-    "forground_magenta": "\033[35m",
-    "forground_cyan": "\033[36m",
-    "forground_white": "\033[37m",
-    "RESET": "\033[0m",
-}
-
-mode = "normal"
-screen = "editor"
-
-
-def getch():
-    global msg
-    return _getch()
-
-
-def color(text, forground="", background=""):
-    return f"""{forground}{background}{text}{colors["RESET"]}"""
-
-
-def clear():
-    if platform.system() == "Windows":
-        system("cls")
-    else:
-        system("clear")
-
 
 size = get_terminal_size()
 args = argv
-name = ""
-content = [""]
-originalContent = [""]
-exploreContent = [""]
-dir = listdir()
+
+buffers = []
+currentBuffer = 0
+
 if len(args) < 2:
     name = "[unamed]"
+    buffers.append(
+        {
+            "name": "[unamed]",
+            "content": [""],
+            "originalContent": [""],
+            "viewY": 0,
+            "viewX": 0,
+            "pos": [0, 0],
+            "mode": "normal",
+            "modifiable": True,
+        }
+    )
 else:
-    name = args[1]
-    with open(name) as data:
+    with open(args[1]) as data:
         content = data.read().splitlines()
-        originalContent = list(content)
-signcolumn = len(str(len(content)))
-signcolumnDir = len(str(len(dir)))
+        buffers.append(
+            {
+                "name": args[1],
+                "content": content,
+                "originalContent": list(content),
+                "viewY": 0,
+                "viewX": 0,
+                "pos": [0, 0],
+                "mode": "normal",
+                "modifiable": True,
+            }
+        )
+
 
 resetTimer = 0
-
-viewY = 0
-viewX = 0
 
 inp = ""
 
 
-def EditorScreen(
-    size,
-    msg,
-    lineLen,
-    buffer,
-    content,
-    originalContent,
-    viewY,
-    viewX,
-    signcolumn,
-    mode,
-    name,
-    pos,
-    colors,
-):
-    for y in range(size.lines - 3):
-        currentY = int(len(str(y + viewY + 1)))
-        line = ""
+# def ExploreScreen(
+#     size,
+#     msg,
+#     lineLen,
+#     buffer,
+#     viewY,
+#     viewX,
+#     mode,
+#     pos,
+#     colors,
+#     dir,
+# ):
+#     for y in range(size.lines - 3):
+#         line = ""
+#
+#         if len(dir) > y + viewY:
+#             for x in range(len(dir[y + viewY])):
+#                 if x < size.columns - (signcolumnDir + 4):
+#                     if pos[1] >= lineLen:
+#                         if mode == "normal":
+#                             if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
+#                                 line += color(
+#                                     dir[y + viewY][x + viewX],
+#                                     forground=colors["forground_white"],
+#                                     background=colors["background_black"],
+#                                 )
+#                             else:
+#                                 if len(dir[y + viewY]) > x + viewX:
+#                                     line += dir[y + viewY][x + viewX]
+#                         elif mode == "insert":
+#                             if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
+#                                 line += dir[y + viewY][x + viewX]
+#                                 line += color(
+#                                     " ",
+#                                     forground=colors["forground_white"],
+#                                     background=colors["background_black"],
+#                                 )
+#                             else:
+#                                 if len(dir[y + viewY]) > x + viewX:
+#                                     line += dir[y + viewY][x + viewX]
+#                     else:
+#                         if [y + viewY, x + viewX] == pos:
+#                             line += color(
+#                                 dir[y + viewY][x + viewX],
+#                                 forground=colors["forground_white"],
+#                                 background=colors["background_black"],
+#                             )
+#                         else:
+#                             if len(dir[y + viewY]) > x + viewX:
+#                                 line += dir[y + viewY][x + viewX]
+#
+#             if line == "" and y + viewY == pos[0]:
+#                 line += color(
+#                     " ",
+#                     forground=colors["forground_white"],
+#                     background=colors["background_black"],
+#                 )
+#
+#             buffer.append(f"{' '*signcolumnDir}{line}")
+#         else:
+#             buffer.append("")
+#
+#     buffer.append(
+#         f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} Explore {color('-'*(size.columns - 13 - len(mode)), forground=colors['forground_black'])}"
+#     )
+#     buffer.append(msg)
+#     print("\n".join(buffer), end="")
+#
 
-        if len(content) > y + viewY:
-            for x in range(len(content[y + viewY])):
-                if x < size.columns - (signcolumn + 4):
-                    if pos[1] >= lineLen:
-                        if mode == "normal":
-                            if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
-                                line += color(
-                                    content[y + viewY][x + viewX],
-                                    forground=colors["forground_white"],
-                                    background=colors["background_black"],
-                                )
-                            else:
-                                if len(content[y + viewY]) > x + viewX:
-                                    line += content[y + viewY][x + viewX]
-                        elif mode == "insert":
-                            if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
-                                line += content[y + viewY][x + viewX]
-                                line += color(
-                                    " ",
-                                    forground=colors["forground_white"],
-                                    background=colors["background_black"],
-                                )
-                            else:
-                                if len(content[y + viewY]) > x + viewX:
-                                    line += content[y + viewY][x + viewX]
-                    else:
-                        if [y + viewY, x + viewX] == pos:
-                            line += color(
-                                content[y + viewY][x + viewX],
-                                forground=colors["forground_white"],
-                                background=colors["background_black"],
-                            )
-                        else:
-                            if len(content[y + viewY]) > x + viewX:
-                                line += content[y + viewY][x + viewX]
-
-            if line == "" and y + viewY == pos[0]:
-                line += color(
-                    " ",
-                    forground=colors["forground_white"],
-                    background=colors["background_black"],
-                )
-
-            buffer.append(
-                f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
-            )
-        else:
-            buffer.append("")
-
-    if originalContent == content:
-        buffer.append(
-            f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
-        )
-    else:
-        buffer.append(
-            f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} [+] {color('-'*(size.columns - 10 - len(name) - len(mode)), forground=colors['forground_black'])}"
-        )
-
-    buffer.append(msg)
-
-    print("\n".join(buffer), end="")
-
-
-def ExploreScreen(
-    size,
-    msg,
-    lineLen,
-    buffer,
-    viewY,
-    viewX,
-    mode,
-    pos,
-    colors,
-    dir,
-):
-    for y in range(size.lines - 3):
-        line = ""
-
-        if len(dir) > y + viewY:
-            for x in range(len(dir[y + viewY])):
-                if x < size.columns - (signcolumnDir + 4):
-                    if pos[1] >= lineLen:
-                        if mode == "normal":
-                            if [y + viewY, x + viewX] == [pos[0], lineLen - 1]:
-                                line += color(
-                                    dir[y + viewY][x + viewX],
-                                    forground=colors["forground_white"],
-                                    background=colors["background_black"],
-                                )
-                            else:
-                                if len(dir[y + viewY]) > x + viewX:
-                                    line += dir[y + viewY][x + viewX]
-                        elif mode == "insert":
-                            if [y + viewY, x + viewX + 1] == [pos[0], lineLen]:
-                                line += dir[y + viewY][x + viewX]
-                                line += color(
-                                    " ",
-                                    forground=colors["forground_white"],
-                                    background=colors["background_black"],
-                                )
-                            else:
-                                if len(dir[y + viewY]) > x + viewX:
-                                    line += dir[y + viewY][x + viewX]
-                    else:
-                        if [y + viewY, x + viewX] == pos:
-                            line += color(
-                                dir[y + viewY][x + viewX],
-                                forground=colors["forground_white"],
-                                background=colors["background_black"],
-                            )
-                        else:
-                            if len(dir[y + viewY]) > x + viewX:
-                                line += dir[y + viewY][x + viewX]
-
-            if line == "" and y + viewY == pos[0]:
-                line += color(
-                    " ",
-                    forground=colors["forground_white"],
-                    background=colors["background_black"],
-                )
-
-            buffer.append(f"{' '*signcolumnDir}{line}")
-        else:
-            buffer.append("")
-
-    buffer.append(
-        f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} Explore {color('-'*(size.columns - 13 - len(mode)), forground=colors['forground_black'])}"
-    )
-    buffer.append(msg)
-    print("\n".join(buffer), end="")
+# def Screen():
+#     global msg
+#     global pos
+#     global screen
+#     global resetTimer
+#     global size
+#     global msg
+#     global lineLen
+#     global buffer
+#     global content
+#     global originalContent
+#     global viewY
+#     global viewX
+#     global signcolumn
+#     global mode
+#     global name
+#     global pos
+#     global colors
+#     global dir
+#     global inp
+#
+#     prevInp = str(inp)
+#     while True:
+#         if prevInp != inp:
+#             clear()
+#             buffer = [
+#                 "\n",
+#                 color("-" * size.columns, forground=colors["forground_black"]),
+#             ]
+#
+#             if screen == "editor":
+#                 lineLen = len(content[pos[0]])
+#                 EditorScreen(
+#                     size,
+#                     msg,
+#                     lineLen,
+#                     buffer,
+#                     content,
+#                     originalContent,
+#                     viewY,
+#                     viewX,
+#                     signcolumn,
+#                     mode,
+#                     name,
+#                     pos,
+#                     colors,
+#                 )
+#             elif screen == "explore":
+#                 lineLen = len(dir[pos[0]])
+#                 ExploreScreen(
+#                     size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir
+#                 )
+#             prevInp = str(inp)
+#
+#         if len(msg) > 0 and msg[0] != ":":
+#             resetTimer += 1
+#         if resetTimer == 10:
+#             msg = ""
+#             resetTimer = 0
 
 
-def Screen():
-    global msg
-    global pos
-    global screen
-    global resetTimer
-    global size
-    global msg
-    global lineLen
-    global buffer
-    global content
-    global originalContent
-    global viewY
-    global viewX
-    global signcolumn
-    global mode
-    global name
-    global pos
-    global colors
-    global dir
-    global inp
+# Thread(target=Screen, daemon=True).start()
 
-    prevInp = str(inp)
-    while True:
-        if prevInp != inp:
-            clear()
-            buffer = [
-                "\n",
-                color("-" * size.columns, forground=colors["forground_black"]),
-            ]
+while buffers:
+    bufData = buffers[currentBuffer]
 
-            if screen == "editor":
-                lineLen = len(content[pos[0]])
-                EditorScreen(
-                    size,
-                    msg,
-                    lineLen,
-                    buffer,
-                    content,
-                    originalContent,
-                    viewY,
-                    viewX,
-                    signcolumn,
-                    mode,
-                    name,
-                    pos,
-                    colors,
-                )
-            elif screen == "explore":
-                lineLen = len(dir[pos[0]])
-                ExploreScreen(
-                    size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir
-                )
-            prevInp = str(inp)
+    name = bufData["name"]
+    content = bufData["content"]
+    originalContent = bufData["originalContent"]
+    pos = bufData["pos"]
+    viewY = bufData["viewY"]
+    viewX = bufData["viewX"]
+    mode = bufData["mode"]
+    modifiable = bufData["modifiable"]
 
-        if len(msg) > 0 and msg[0] != ":":
-            resetTimer += 1
-        if resetTimer == 10:
-            msg = ""
-            resetTimer = 0
+    signcolumn = len(str(len(content)))
 
+    lineLen = int(len(content[pos[0]]))
 
-Thread(target=Screen, daemon=True).start()
-
-while True:
-    lineLen = 0
     if pos[0] == size.lines - 2 + viewY - settings["scrolloff"]:
         viewY += 1
     if pos[0] == viewY - 2 + settings["scrolloff"]:
@@ -323,42 +207,34 @@ while True:
         if viewX > 0:
             viewX -= 1
 
-    if screen == "editor":
-        lineLen = len(content[pos[0]])
-    if screen == "explore":
-        lineLen = len(dir[pos[0]])
-
     # Screen(msg, pos, screen, resetTimer)
 
-    # buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
-    #
-    # if screen == "editor":
-    #     lineLen = len(content[pos[0]])
-    #     EditorScreen(
-    #         size,
-    #         msg,
-    #         lineLen,
-    #         buffer,
-    #         content,
-    #         originalContent,
-    #         viewY,
-    #         viewX,
-    #         signcolumn,
-    #         mode,
-    #         name,
-    #         pos,
-    #         colors,
-    #     )
+    Display(
+        size,
+        msg,
+        lineLen,
+        content,
+        originalContent,
+        viewY,
+        viewX,
+        signcolumn,
+        mode,
+        name,
+        pos,
+        colors,
+        color,
+    )
+
     # elif screen == "explore":
     #     lineLen = len(dir[pos[0]])
     #     ExploreScreen(size, msg, lineLen, buffer, viewY, viewX, mode, pos, colors, dir)
-    #
-    # if len(msg) > 0 and msg[0] != ":":
-    #     resetTimer += 1
-    # if resetTimer == 10:
-    #     msg = ""
-    #     resetTimer = 0
-    #
+
+    if len(msg) > 0 and msg[0] != ":":
+        resetTimer += 1
+    if resetTimer == 10:
+        msg = ""
+        resetTimer = 0
+
     inp = getch()
 
     if mode == "normal":
@@ -388,7 +264,7 @@ while True:
                 mode = "insert"
                 pos[1] += 1
             case ":":
-                mode = "command"
+                bufData["mode"] = "command"
                 msg = ":"
             case "\x03":
                 msg = "Use :q to exit"
@@ -439,53 +315,73 @@ while True:
                     case "q" | "q!":
                         if commands[0] == "q":
                             if originalContent == content:
-                                clear()
-                                break
+                                buffers.pop(currentBuffer)
+                                currentBuffer = len(buffers) - 1
+                                msg = ""
                             else:
-                                msg = "Unsaved changes, pls save before exiting"
+                                msg = "Unsaved changes, pls save before closing the buffer"
                         else:
-                            clear()
-                            break
-                    case "qa" | "qa!":
-                        if commands[0] == "qa":
-                            if originalContent == content:
-                                clear()
-                                break
+                            buffers.pop(currentBuffer)
+                            currentBuffer = len(buffers) - 1
+                            msg = ""
+                    # case "qa" | "qa!":
+                    #     if commands[0] == "qa":
+                    #         if originalContent == content:
+                    #             clear()
+                    #             break
+                    #         else:
+                    #             msg = "Unsaved changes, pls save before exiting"
+                    #     else:
+                    #         clear()
+                    #         break
+                    case "w" | "wq" | "wq!":
+                        if modifiable:
+                            if len(commands) > 1:
+                                with open(commands[1], "w") as data:
+                                    data.write("\n".join(content))
                             else:
-                                msg = "Unsaved changes, pls save before exiting"
+                                with open(name, "w") as data:
+                                    data.write("\n".join(content))
+                            originalContent = list(content)
+                            msg = ""
+                            if commands[0] == "wq":
+                                if originalContent == content:
+                                    buffers.pop(currentBuffer)
+                                    currentBuffer = len(buffers) - 1
+                                    msg = ""
+                                else:
+                                    msg = "Unsaved changes, pls save before exiting"
+                            if commands[0] == "wq!":
+                                buffers.pop(currentBuffer)
+                                currentBuffer = len(buffers) - 1
+                                msg = ""
                         else:
-                            clear()
-                            break
-                    case "w" | "wq" | "wqa" | "wq!" | "wqa!":
-                        if len(commands) > 1:
-                            with open(commands[1], "w") as data:
-                                data.write("\n".join(content))
-                        else:
-                            with open(name, "w") as data:
-                                data.write("\n".join(content))
-                        originalContent = list(content)
-                        msg = ""
-                        if commands[0] == "wq" or commands[0] == "wqa":
-                            if originalContent == content:
-                                clear()
-                                break
-                            else:
-                                msg = "Unsaved changes, pls save before exiting"
-                        if commands[0] == "wq!" or commands[0] == "wqa!":
-                            clear()
-                            break
+                            msg = "This buffer is not modifiable"
                     case "Explore" | "Ex":
-                        screen = "explore"
                         msg = ""
+                        buffers.append(
+                            {
+                                "name": "Explore",
+                                "content": listdir(),
+                                "originalContent": listdir(),
+                                "viewY": 0,
+                                "viewX": 0,
+                                "pos": [0, 0],
+                                "mode": "normal",
+                                "modifiable": False,
+                            }
+                        )
+                        currentBuffer = len(buffers) - 1
                     case _:
                         msg = "Command doesn't exist!!"
-                mode = "normal"
+                bufData["mode"] = "normal"
             case "\x7f":
                 msg = msg[0:-1]
                 if msg == "":
-                    mode = "normal"
+                    bufData["mode"] = "normal"
             case "\x03" | "\x1b":
-                mode = "normal"
+                bufData["mode"] = "normal"
                 msg = ""
             case _:
                 msg += inp
+clear()

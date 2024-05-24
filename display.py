@@ -1,11 +1,7 @@
-import utility
-
-
-def EditorScreen(
+def Display(
     size,
     msg,
     lineLen,
-    screen,
     content,
     originalContent,
     viewY,
@@ -15,7 +11,9 @@ def EditorScreen(
     name,
     pos,
     colors,
+    color,
 ):
+    buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
     for y in range(size.lines - 3):
         currentY = int(len(str(y + viewY + 1)))
         line = ""
@@ -63,21 +61,21 @@ def EditorScreen(
                     background=colors["background_black"],
                 )
 
-            screen.append(
+            buffer.append(
                 f"{color(y + viewY + 1, forground=colors['forground_black'])}{' '*(signcolumn-currentY)} {color('|', forground=colors['forground_black'])} {line}"
             )
         else:
-            screen.append("")
+            buffer.append("")
 
     if originalContent == content:
-        screen.append(
+        buffer.append(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} {color('-'*(size.columns - 6 - len(name) - len(mode)), forground=colors['forground_black'])}"
         )
     else:
-        screen.append(
+        buffer.append(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} [+] {color('-'*(size.columns - 10 - len(name) - len(mode)), forground=colors['forground_black'])}"
         )
 
-    screen.append(msg)
+    buffer.append(msg)
 
-    print("\n".join(screen), end="")
+    print("\n".join(buffer), end="")
