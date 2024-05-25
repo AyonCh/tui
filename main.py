@@ -1,6 +1,5 @@
 from os import (
     get_terminal_size,
-    getxattr,
     listdir,
     path,
     mkdir,
@@ -14,8 +13,8 @@ from sys import argv
 from display import Display
 from utility import color, getch, clear, colors
 
-msg = ""
-settings = {"cursorcolor": "black", "scrolloff": 10}
+msgs = ["testing", "multiline", "msg"]
+settings = {"cursorcolor": "black", "scrolloff": 10, "tabwidth": 4}
 
 size = get_terminal_size()
 args = argv
@@ -82,7 +81,7 @@ while buffers:
 
     Display(
         size,
-        msg,
+        msgs,
         lineLen,
         bufData["content"],
         bufData["originalContent"],
@@ -100,7 +99,7 @@ while buffers:
     if resetTimer > 0:
         resetTimer += 1
     if resetTimer == 11:
-        msg = ""
+        msgs = [""]
         resetTimer = 0
 
     inp = getch()
@@ -136,14 +135,20 @@ while buffers:
                 if bufData["modifiable"]:
                     bufData["mode"] = "insert"
                 else:
-                    msg = "This buffer is not modifiable"
+                    msgs = ["This buffer is not modifiable"]
                     resetTimer = 1
             case "a":
                 if bufData["modifiable"]:
                     bufData["mode"] = "insert"
                     bufData["pos"][1] += 1
                 else:
-                    msg = "This buffer is not modifiable"
+                    msgs = ["This buffer is not modifiable"]
+                    resetTimer = 1
+            case "d":
+                if bufData["modifiable"]:
+                    bufData["mode"] = "waiting"
+                else:
+                    msgs = ["This buffer is not modifiable"]
                     resetTimer = 1
             case "\r":
                 if bufData["name"] == "Explore":
@@ -204,24 +209,24 @@ while buffers:
             case "%":
                 if bufData["name"] == "Explore":
                     bufData["mode"] = "command"
-                    msg = "Enter filename: "
+                    msgs = ["Enter filename: "]
             case "r":
                 if bufData["name"] == "Explore":
                     bufData["mode"] = "command"
-                    msg = "Rename to: "
+                    msgs = ["Rename to: "]
             case "D":
                 if bufData["name"] == "Explore":
                     bufData["mode"] = "command"
-                    msg = "Delete file: "
+                    msgs = ["Delete file: "]
             case "d":
                 if bufData["name"] == "Explore":
                     bufData["mode"] = "command"
-                    msg = "Enter directory name: "
+                    msgs = ["Enter directory name: "]
             case ":":
                 bufData["mode"] = "command"
-                msg = ":"
+                msgs = [":"]
             case "\x03":
-                msg = "Use :q to exit"
+                msgs = ["Use :q to exit"]
                 resetTimer = 1
     elif bufData["mode"] == "insert":
         match inp:
@@ -235,6 +240,15 @@ while buffers:
                 bufData["content"].insert(bufData["pos"][0] + 1, after)
                 bufData["pos"][0] += 1
                 bufData["pos"][1] = 0
+            case "\t":
+                buf = bufData["content"][bufData["pos"][0]]
+                before = buf[: bufData["pos"][1]]
+                after = buf[bufData["pos"][1] :]
+                bufData["content"][bufData["pos"][0]] = (
+                    before + " " * settings["tabwidth"] + after
+                )
+                bufData["pos"][1] += settings["tabwidth"]
+
             case "\x7f":
                 if bufData["pos"][0] != 0:
                     buf = bufData["content"][bufData["pos"][0]]
@@ -268,7 +282,7 @@ while buffers:
     elif bufData["mode"] == "command":
         match inp:
             case "\r":
-                arguments = msg.strip().split(":")
+                arguments = msgs[0].strip().split(":")
                 commands = arguments[1].split(" ")
                 if arguments[0] == "Enter filename":
                     if arguments[1]:
@@ -277,7 +291,7 @@ while buffers:
                                 bufData["baseDir"] + arguments[1].strip(), "w"
                             ) as data:
                                 data.write("")
-                            msg = ""
+                            msgs = [""]
                             directory = []
                             for dir in listdir(bufData["baseDir"]):
                                 if path.isdir(bufData["baseDir"] + dir):
@@ -287,10 +301,10 @@ while buffers:
                             bufData["content"] = ["../", *directory]
                             bufData["originalContent"] = ["../", *directory]
                         except:
-                            msg = "Directory doesn't exists"
+                            msgs = ["Directory doesn't exists"]
                             resetTimer = 1
                     else:
-                        msg = ""
+                        msgs = [""]
                 elif arguments[0] == "Rename to":
                     if arguments[1]:
                         try:
@@ -307,12 +321,12 @@ while buffers:
                                     directory.append(dir)
                             bufData["content"] = ["../", *directory]
                             bufData["originalContent"] = ["../", *directory]
-                            msg = ""
+                            msgs = [""]
                         except:
-                            msg = "Directory doesn't exists"
+                            msgs = ["Directory doesn't exists"]
                             resetTimer = 1
                     else:
-                        msg = ""
+                        msgs = [""]
                 elif arguments[0] == "Delete file":
                     if (
                         arguments[1].strip().lower() == "y"
@@ -331,7 +345,7 @@ while buffers:
                                 directory.append(dir)
                         bufData["content"] = ["../", *directory]
                         bufData["originalContent"] = ["../", *directory]
-                    msg = ""
+                    msgs = [""]
                 elif arguments[0] == "Enter directory name":
                     if arguments[1]:
                         mkdir(bufData["baseDir"] + arguments[1].strip())
@@ -343,7 +357,7 @@ while buffers:
                                 directory.append(dir)
                         bufData["content"] = ["../", *directory]
                         bufData["originalContent"] = ["../", *directory]
-                    msg = ""
+                    msgs = [""]
                 else:
                     match commands[0]:
                         case "q" | "q!":
@@ -352,19 +366,21 @@ while buffers:
                                     if bufData["originalContent"] == bufData["content"]:
                                         buffers.pop(currentBuffer)
                                         currentBuffer = len(buffers) - 1
-                                        msg = ""
+                                        msgs = [""]
                                     else:
-                                        msg = "Unsaved changes, pls save before closing the buffer"
+                                        msgs = [
+                                            "Unsaved changes, pls save before closing the buffer"
+                                        ]
                                         resetTimer = 1
                                 else:
                                     buffers.pop(currentBuffer)
                                     currentBuffer = len(buffers) - 1
-                                    msg = ""
+                                    msgs = [""]
 
                             else:
                                 buffers.pop(currentBuffer)
                                 currentBuffer = len(buffers) - 1
-                                msg = ""
+                                msgs = [""]
                         case "qa" | "qa!":
                             if commands[0] == "qa":
                                 for buffer in range(len(buffers)):
@@ -372,7 +388,9 @@ while buffers:
                                         buffers[buffer]["content"]
                                         != buffers[buffer]["originalContent"]
                                     ):
-                                        msg = f"Unsaved changes in buffer {buffer}, pls save before exiting"
+                                        msgs = [
+                                            f"Unsaved changes in buffer {buffer}, pls save before exiting"
+                                        ]
                                         break
                                 else:
                                     buffers = []
@@ -387,15 +405,15 @@ while buffers:
                                     with open(bufData["name"], "w") as data:
                                         data.write("\n".join(bufData["content"]))
                                 bufData["originalContent"] = list(bufData["content"])
-                                msg = ""
+                                msgs = [""]
                             else:
-                                msg = "Buffer is not modifiable"
+                                msgs = ["Buffer is not modifiable"]
                                 resetTimer = 1
                             if commands[0] == "wq" or commands[0] == "wq!":
                                 buffers.pop(currentBuffer)
                                 if currentBuffer >= len(buffers):
                                     currentBuffer = len(buffers) - 1
-                                msg = ""
+                                msgs = [""]
                         case "wa" | "wqa" | "wqa!":
                             for buffer in range(len(buffers)):
                                 if buffers[buffer]["modifiable"]:
@@ -406,18 +424,18 @@ while buffers:
                                     buffers[buffer]["originalContent"] = list(
                                         buffers[buffer]["content"]
                                     )
-                                    msg = ""
+                                    msgs = [""]
                                     if commands[0] == "wqa" or commands[0] == "wqa!":
                                         buffers.pop(buffer)
                                         if currentBuffer >= len(buffers):
                                             currentBuffer = len(buffers) - 1
-                                        msg = ""
+                                        msgs = [""]
                                 else:
-                                    msg = f"Buffer {buffer} is not modifiable"
+                                    msgs = [f"Buffer {buffer} is not modifiable"]
                                     resetTimer = 1
                                     break
                         case "Explore" | "Ex":
-                            msg = ""
+                            msgs = [""]
                             for buffer in range(len(buffers)):
                                 if buffers[buffer]["name"] == "Explore":
                                     currentBuffer = buffer
@@ -448,12 +466,12 @@ while buffers:
                             if len(commands) > 1:
                                 if int(commands[1]) < len(buffers):
                                     currentBuffer = int(commands[1])
-                                    msg = ""
+                                    msgs = [""]
                                 else:
-                                    msg = "That buffer doesn't exists"
+                                    msgs = ["That buffer doesn't exists"]
                                     resetTimer = 1
                             else:
-                                msg = str(currentBuffer)
+                                msgs = [str(currentBuffer)]
                         case "badd" | "e":
                             if len(commands) > 1:
                                 try:
@@ -471,12 +489,12 @@ while buffers:
                                                 "modifiable": True,
                                             }
                                         )
-                                    msg = ""
+                                    msgs = [""]
                                 except:
-                                    msg = "File/Folder doesn't exists!"
+                                    msgs = ["File/Folder doesn't exists!"]
                                     resetTimer = 1
                             else:
-                                msg = "Argument required!"
+                                msgs = ["Argument required!"]
                                 resetTimer = 1
 
                         case "bdel":
@@ -485,32 +503,37 @@ while buffers:
                                     buffers.pop(int(commands[1]))
                                     if currentBuffer >= len(buffers):
                                         currentBuffer = len(buffers) - 1
-                                    msg = ""
+                                    msgs = [""]
                                 else:
-                                    msg = "That buffer doesn't exists"
+                                    msgs = ["That buffer doesn't exists"]
                                     resetTimer = 1
                             else:
-                                msg = "Argument required!"
+                                msgs = ["Argument required!"]
                                 resetTimer = 1
                         case _:
-                            msg = "Command doesn't exist!!"
+                            msgs = ["Command doesn't exist!!"]
                             resetTimer = 1
                 bufData["mode"] = "normal"
             case "\x7f":
-                if not (len(msg) > 1 and msg.strip()[-1] == ":"):
-                    msg = msg[0:-1]
-                    if msg == "":
+                if not (len(msgs[0]) > 1 and msgs[0].strip()[-1] == ":"):
+                    msgs[0] = msgs[0][0:-1]
+                    if msgs[0] == "":
                         bufData["mode"] = "normal"
             case "\x03" | "\x1b":
                 bufData["mode"] = "normal"
-                msg = ""
+                msgs = [""]
             case _:
-                msg += inp
+                msgs[0] += inp
     elif bufData["mode"] == "waiting":
         match inp:
             case "g":
                 bufData["viewY"] = 0
                 bufData["pos"][0] = 0
+            case "d":
+
+                bufData["content"].pop(bufData["pos"][0])
+                if bufData["pos"][0] == len(bufData["content"]):
+                    bufData["pos"][0] -= 1
             case "\x03" | "\x1b":
                 bufData["mode"] = "normal"
         bufData["mode"] = "normal"

@@ -1,6 +1,6 @@
 def Display(
     size,
-    msg,
+    msgs,
     lineLen,
     content,
     originalContent,
@@ -15,7 +15,7 @@ def Display(
     color,
 ):
     buffer = ["\n", color("-" * size.columns, forground=colors["forground_black"])]
-    for y in range(size.lines - 3):
+    for y in range(size.lines - 3 - len(msgs) + 1):
         currentY = int(len(str(y + viewY + 1)))
         line = ""
 
@@ -82,6 +82,7 @@ def Display(
             f"{color('-', forground=colors['forground_black'])} {mode.upper()} {color('-', forground=colors['forground_black'])} {name} [+] {color('-'*(size.columns - 10 - len(name) - len(mode)), forground=colors['forground_black'])}"
         )
 
-    buffer.append(msg)
+    for msg in msgs:
+        buffer.append(msg)
 
     print("\n".join(buffer), end="")
